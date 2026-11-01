@@ -89,6 +89,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
 .big small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 2px; }
 .head-meta { display: flex; flex-direction: column; gap: 2px; font: 500 12px var(--mono); color: var(--muted); }
 .head-meta strong { color: var(--chalk); font-weight: 600; }
+.viz { width: 78px; height: 78px; flex: 0 0 auto; margin-left: auto; }
+.viz .tl { stroke: var(--muted); stroke-dasharray: 3 4; stroke-width: 1.2; }
+.viz .pa { stroke: var(--yardage); stroke-width: 3; stroke-linecap: round; fill: none; }
+.viz .fa { stroke: var(--flag); stroke-width: 4; stroke-linecap: round; }
+.viz text { font: 600 8px var(--mono); fill: var(--muted); }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--yardage); color: #2a1e00; font: 600 11px var(--mono); }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 .stat { min-width: 0; }
@@ -188,11 +193,18 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
       <span id="rOffline">On line</span>
       <span><span class="tag" id="rShape">Straight</span></span>
     </div>
+    <svg class="viz" viewBox="-40 -40 80 80" aria-label="Club path and face at impact">
+      <line class="tl" x1="0" y1="34" x2="0" y2="-34"/>
+      <text x="3" y="-30">TARGET</text>
+      <path class="pa" id="vizPath" d="M0 30 L0 -26 M-5 -18 L0 -26 L5 -18"/>
+      <line class="fa" id="vizFace" x1="-13" y1="0" x2="13" y2="0"/>
+      <circle cx="0" cy="-4" r="3.2" fill="#ffffff"/>
+    </svg>
   </div>
   <div class="grid">
     <div class="stat"><label>Club spd</label><output id="rClub">0<small>mph</small></output></div>
     <div class="stat"><label>Ball spd</label><output id="rBall">0<small>mph</small></output></div>
-    <div class="stat"><label>Smash</label><output id="rSmash">0</output></div>
+    <div class="stat"><label>Path</label><output id="rPath">0<small>°</small></output></div>
     <div class="stat"><label>Launch</label><output id="rLaunch">0<small>°</small></output></div>
     <div class="stat"><label>Spin</label><output id="rSpin">0<small>rpm</small></output></div>
     <div class="stat"><label>Apex</label><output id="rApex">0<small>ft</small></output></div>
@@ -215,19 +227,19 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <h2 id="setTitle">How to swing your phone</h2>
     <div class="warn-box">Wear a wrist strap or grip the phone with both hands, and clear the room. Swing smooth, not hard: the power assist below turns a living-room swing into a full shot.</div>
     <ol>
-      <li>Hold the phone in both hands like a club grip: long edge along the shaft, top edge toward your belt buckle, screen facing the target.</li>
-      <li>Tap <b>Swing with phone</b>, take your address and hold still. A beep means the ball is teed up.</li>
-      <li>Take the club back, pause at the top if you like, and swing through. The speed through impact sets club speed; the twist of your hands sets the face.</li>
-      <li>The next ball tees up on its own after the shot lands, so you never have to put the phone down.</li>
+      <li>Turn on Portrait Orientation Lock. Hold the phone in both hands like a club grip, long edge along the shaft and top edge toward your belt buckle. The screen can face you so you can watch the club.</li>
+      <li>Tap <b>Swing with phone</b>, take your address and hold still. The game reads how you are holding the phone, squares the virtual driver to the target and beeps.</li>
+      <li>Swing. The driver on screen follows your hands and draws the clubhead's path. Speed sets distance; face and path at impact set the start line and curve.</li>
+      <li>The yellow trail stays on screen after the shot so you can check your path. The next ball tees up on its own.</li>
     </ol>
     <h3>Settings</h3>
     <div class="row"><label>Handed</label><div class="seg" id="handSeg"><button data-v="R" aria-pressed="true">Right</button><button data-v="L" aria-pressed="false">Left</button></div></div>
     <div class="row"><label for="assist">Power assist</label><input type="range" id="assist" min="1" max="2.6" step="0.05" value="1.3"><span class="val" id="assistVal">1.30×</span></div>
     <div class="row"><label for="shapeSens">Shot-shape strength</label><input type="range" id="shapeSens" min="0" max="2" step="0.1" value="1"><span class="val" id="shapeVal">1.0×</span></div>
-    <div class="row"><label>Flip curve direction</label><div class="seg" id="flipSeg"><button data-v="0" aria-pressed="true">Off</button><button data-v="1" aria-pressed="false">On</button></div></div>
+    <div class="row"><label>Reverse club motion</label><div class="seg" id="flipSeg"><button data-v="0" aria-pressed="true">Off</button><button data-v="1" aria-pressed="false">On</button></div></div>
     <div class="row"><label>Wind</label><div class="seg" id="windSeg"><button data-v="0" aria-pressed="false">Calm</button><button data-v="1" aria-pressed="true">Breezy</button></div></div>
-    <p style="color:var(--muted)">Your first few swings set your personal baseline, so your normal swing flies straight and changes from it shape the ball. If slices come out as hooks for your grip, turn on Flip curve direction. Motion needs this page opened on its own (https) in Safari or Chrome. Inside an embedded preview, use Swipe.</p>
-    <div class="sheet-actions"><button class="secondary" id="recal">Reset baseline</button><button class="primary" id="closeSettings">Done</button></div>
+    <p style="color:var(--muted)">If the on-screen club moves the opposite way to your hands, turn on Reverse club motion. Phone swing needs this page opened on its own (https) in Safari or Chrome. Inside an embedded preview, use Swipe.</p>
+    <div class="sheet-actions"><button class="primary" id="closeSettings">Done</button></div>
   </div>
 </div>
 
@@ -266,7 +278,6 @@ const store = {
 };
 const settings = Object.assign({ hand: 'R', assist: 1.3, shape: 1, flip: 0, wind: 1, club: 'DR' }, store.get('settings', {}));
 let shots = store.get('shots', []);
-let baseline = store.get('baseline', null); // {twist, rate, n}
 const saveSettings = () => store.set('settings', settings);
 let club = CLUBS.find(c => c.id === settings.club) || CLUBS[0];
 
@@ -331,23 +342,22 @@ function simulateShot(o) {
 }
 
 // ---------- Turn a swing into a shot ----------
-// swing: { clubMph, faceDeg (+ = open/right), curve (-1..1, + = fades right), tempo }
+// swing: { clubMph, faceDeg, pathDeg (both world angles, + = right of target), tempo }
+// Start line is mostly face; curve comes from face-to-path, as on a launch monitor.
 function launchFromSwing(sw) {
-  const handSign = settings.hand === 'L' ? -1 : 1;
   const clubMph = Math.max(15, Math.min(140, sw.clubMph));
   const tempoErr = sw.tempo ? Math.min(0.08, Math.abs(sw.tempo - 3) * 0.018) : 0.02;
   const strike = 1 - tempoErr - Math.random() * 0.025;
   const ballMph = clubMph * club.smash * strike;
   const speedRatio = ballMph / club.refBall;
-  const face = sw.faceDeg * handSign;
-  const curve = sw.curve * handSign;
+  const face = sw.faceDeg, path = sw.pathDeg;
   const launch = club.launch + (Math.random() - 0.5) * 1.6 + (1 - strike) * 10 * (Math.random() < 0.5 ? -1 : 1);
   const spin = club.spin * Math.pow(Math.max(0.3, speedRatio), 0.7) * (1 + (1 - strike) * 2) * (1 + (Math.random() - 0.5) * 0.08);
-  const dir = face * 0.8;
-  const axis = Math.max(-35, Math.min(35, curve * 22 + face * 0.6));
+  const dir = face * 0.78 + path * 0.22;
+  const axis = Math.max(-35, Math.min(35, (face - path) * 2.4));
   const wv = windVec();
   const sim = simulateShot({ ballMps: ballMph * MPH, launchDeg: launch, dirDeg: dir, spinRpm: spin, axisDeg: axis, wind: wv });
-  return { sim, clubMph, ballMph, smash: ballMph / clubMph, launch, spin, face, axis, tempo: sw.tempo };
+  return { sim, clubMph, ballMph, smash: ballMph / clubMph, launch, spin, face, path, dir, axis, tempo: sw.tempo, hand: settings.hand };
 }
 
 // ---------- Wind ----------
@@ -425,16 +435,11 @@ function canvasTex(w, h, draw) {
   const tee = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.003, 0.03, 8), new THREE.MeshLambertMaterial({ color: 0xff9a3c }));
   tee.position.set(0, 0.015, 0); scene.add(tee);
   const post = new THREE.MeshLambertMaterial({ color: 0x24301f });
-  [-2.4, 2.4].forEach(x => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 2.6), post);
-    wall.position.set(x, 1.2, 1.2); scene.add(wall);
-  });
   // Neighbouring bays with idle balls
   const ballMat = new THREE.MeshLambertMaterial({ color: 0xf7f7f2 });
   for (let b = -3; b <= 3; b++) {
     if (!b) continue;
     const m2 = mat.clone(); m2.position.x = b * 4.8; scene.add(m2);
-    const w2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 2.6), post); w2.position.set(b * 4.8 + 2.4 * Math.sign(b), 1.2, 1.2); scene.add(w2);
   }
   // Practice ball basket
   const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.2, 16, 1, true), new THREE.MeshLambertMaterial({ color: 0x1d5d8f, side: THREE.DoubleSide }));
@@ -599,19 +604,19 @@ function hitShot(swing) {
 }
 function onBallStopped(shot) {
   const s = shot.sim;
-  const rec = { club: shot.club, carry: s.carryYd, total: s.totalYd, off: s.offlineYd, ball: shot.ballMph, cs: shot.clubMph, t: Date.now() };
+  const rec = { club: shot.club, carry: s.carryYd, total: s.totalYd, off: s.offlineYd, ball: shot.ballMph, cs: shot.clubMph, face: shot.face, path: shot.path, t: Date.now() };
   shots.push(rec); if (shots.length > 300) shots.shift();
   store.set('shots', shots);
   showResult(shot);
   setTimeout(() => {
     busy = false;
     flight = null;
-    if (mode === 'motion') armMotion();
+    if (mode === 'motion') { resetClubPose(); armMotion(); }
     else setStatus('', 'Drag down, then flick up to swing');
   }, 2600);
 }
 function shapeName(shot) {
-  const off = shot.sim.offlineYd, axis = shot.axis, dir = shot.face * 0.8;
+  const off = shot.sim.offlineYd, axis = shot.axis, dir = shot.dir;
   const startL = dir < -1.5, startR = dir > 1.5, curveL = axis < -4, curveR = axis > 4;
   if (Math.abs(off) < 4 && !curveL && !curveR) return 'Pure';
   if (startL && curveL) return 'Pull hook';
@@ -619,6 +624,15 @@ function shapeName(shot) {
   if (curveL) return startR ? 'Draw' : 'Hook';
   if (curveR) return startL ? 'Fade' : 'Slice';
   return startL ? 'Pull' : startR ? 'Push' : 'Straight';
+}
+// Top-down impact diagram: dashed target line, yellow path arrow, red face line. Angles exaggerated 2x.
+function drawViz(face, path) {
+  const P = clamp(path * 2, -40, 40) * Math.PI / 180, F = clamp(face * 2, -40, 40) * Math.PI / 180;
+  const sx = -Math.sin(P) * 30, sy = Math.cos(P) * 30, ex = Math.sin(P) * 26, ey = -Math.cos(P) * 26;
+  const bx = Math.sin(P) * 18, by = -Math.cos(P) * 18, nx = Math.cos(P) * 5, ny = Math.sin(P) * 5;
+  $('vizPath').setAttribute('d', `M${sx.toFixed(1)} ${sy.toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)} M${(bx - nx).toFixed(1)} ${(by - ny).toFixed(1)} L${ex.toFixed(1)} ${ey.toFixed(1)} L${(bx + nx).toFixed(1)} ${(by + ny).toFixed(1)}`);
+  const fx = Math.cos(F) * 13, fy = Math.sin(F) * 13;
+  const fl = $('vizFace'); fl.setAttribute('x1', (-fx).toFixed(1)); fl.setAttribute('y1', (4 - fy).toFixed(1)); fl.setAttribute('x2', fx.toFixed(1)); fl.setAttribute('y2', (4 + fy).toFixed(1));
 }
 function showResult(shot) {
   const s = shot.sim, r = (x) => Math.round(x);
@@ -629,12 +643,16 @@ function showResult(shot) {
   $('rShape').textContent = shapeName(shot);
   $('rClub').innerHTML = `${r(shot.clubMph)}<small>mph</small>`;
   $('rBall').innerHTML = `${r(shot.ballMph)}<small>mph</small>`;
-  $('rSmash').textContent = shot.smash.toFixed(2);
+  const lefty = shot.hand === 'L';
+  const p = shot.path, inOut = lefty ? p < 0 : p > 0;
+  $('rPath').innerHTML = `${Math.abs(p).toFixed(1)}<small>° ${Math.abs(p) < 0.5 ? '' : inOut ? 'in-out' : 'out-in'}</small>`;
+  drawViz(shot.face, shot.path);
   $('rLaunch').innerHTML = `${shot.launch.toFixed(1)}<small>°</small>`;
   $('rSpin').innerHTML = `${r(shot.spin / 10) * 10}<small>rpm</small>`;
   $('rApex').innerHTML = `${r(s.apexYd * 3)}<small>ft</small>`;
   const f = shot.face;
-  $('rFace').innerHTML = `${Math.abs(f).toFixed(1)}<small>° ${Math.abs(f) < 0.5 ? '' : f > 0 ? 'open' : 'shut'}</small>`;
+  const open = lefty ? f < 0 : f > 0;
+  $('rFace').innerHTML = `${Math.abs(f).toFixed(1)}<small>° ${Math.abs(f) < 0.5 ? '' : open ? 'open' : 'shut'}</small>`;
   $('rTempo').textContent = shot.tempo ? `${shot.tempo.toFixed(1)}:1` : '–';
   $('result').classList.remove('dim');
   const best = Math.max(0, ...shots.filter(x => x.club === shot.club).slice(0, -1).map(x => x.total));
@@ -680,14 +698,118 @@ let wakeLock = null;
 async function keepAwake() { try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) {} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && mode === 'motion') keepAwake(); });
 
-// ---------- Motion swing detection ----------
-// The phone rides in the hands. Backswing and downswing rotate around the same main
-// axis in opposite directions; downswing angular speed × club radius = clubhead speed.
-// Rotation about the phone's long axis (the "shaft") is face rotation.
+// ---------- Motion swing: live virtual driver ----------
+// The phone rides in the hands. Its gyroscope is integrated into an orientation, calibrated at
+// address with gravity, and drives a one-lever model of arms + driver pivoting at the chest.
+// Face angle and club path are read from that model at the moment the head reaches the ball.
+const ARM = 0.62, LEVER = 1.72; // chest→hands, chest→clubhead (m)
+const BALL_AT = new THREE.Vector3(0, 0.03, 0);
+const SWG = {
+  qRel: new THREE.Quaternion(), Q0: new THREE.Quaternion(), Q0inv: new THREE.Quaternion(),
+  faceP: new THREE.Vector3(0, 0, -1), grav: new THREE.Vector3(), gravN: 0,
+  head: new THREE.Vector3(), prevHead: new THREE.Vector3(), best: null, trail: [], trailTick: 0,
+};
+function rig() {
+  const s = settings.hand === 'L' ? 1 : -1; // side of the ball the golfer stands on (x)
+  const d0 = new THREE.Vector3(-0.53 * s, -0.85, 0).normalize(); // chest → clubhead at address
+  const C = BALL_AT.clone().addScaledVector(d0, -LEVER);
+  return { s, d0, C };
+}
+let RIG = rig();
+const clubGroup = new THREE.Group();
+scene.add(clubGroup);
+function buildClub() {
+  RIG = rig();
+  while (clubGroup.children.length) clubGroup.remove(clubGroup.children[0]);
+  clubGroup.position.copy(RIG.C);
+  const d = RIG.d0, along = (len) => d.clone().multiplyScalar(len);
+  const cyl = (r1, r2, from, to, color) => {
+    const len = to - from;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, 14), new THREE.MeshLambertMaterial({ color }));
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().negate());
+    m.position.copy(along(from + len / 2));
+    clubGroup.add(m);
+  };
+  cyl(0.016, 0.012, ARM - 0.04, ARM + 0.26, 0x16181b);   // grip
+  cyl(0.0065, 0.004, ARM + 0.26, LEVER - 0.02, 0xc9ced4); // shaft
+  // Gloved hands
+  const glove = new THREE.MeshLambertMaterial({ color: 0xf4f1ea }), skin = new THREE.MeshLambertMaterial({ color: 0xc58f6a });
+  const h1 = new THREE.Mesh(new THREE.SphereGeometry(0.048, 16, 12), glove); h1.scale.set(1, 1.35, 1);
+  h1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d); h1.position.copy(along(ARM)); clubGroup.add(h1);
+  const h2 = new THREE.Mesh(new THREE.SphereGeometry(0.046, 16, 12), skin); h2.scale.set(1, 1.3, 1);
+  h2.quaternion.copy(h1.quaternion); h2.position.copy(along(ARM + 0.1)); clubGroup.add(h2);
+  // Driver head: toe points away from the golfer, face toward the target (-z)
+  const headPos = along(LEVER).add(new THREE.Vector3(-RIG.s * 0.05, -0.004, 0.088));
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshLambertMaterial({ color: 0x1b1f26 }));
+  head.scale.set(0.075, 0.036, 0.068); head.position.copy(headPos); clubGroup.add(head);
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x3a4250 }));
+  crown.scale.set(0.07, 0.036, 0.063); crown.position.copy(headPos).add(new THREE.Vector3(0, 0.002, 0)); clubGroup.add(crown);
+  const faceMesh = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.052, 0.006), new THREE.MeshLambertMaterial({ color: 0xe8463a }));
+  faceMesh.position.copy(headPos).add(new THREE.Vector3(0, 0, -0.064)); clubGroup.add(faceMesh);
+  const line = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.002, 0.05), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  line.position.copy(headPos).add(new THREE.Vector3(0, 0.031, -0.02)); clubGroup.add(line);
+  clubGroup.visible = mode === 'motion';
+}
+// Swing path trail
+const trailMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0xffd36b, transparent: true, opacity: 0.9, depthWrite: false }));
+trailMesh.frustumCulled = false; scene.add(trailMesh);
+function rebuildTrail() {
+  const pts = SWG.trail;
+  if (pts.length < 3) { trailMesh.visible = false; return; }
+  const step = Math.max(1, Math.floor(pts.length / 120)), use = [];
+  for (let i = 0; i < pts.length; i += step) use.push(pts[i]);
+  if (use[use.length - 1] !== pts[pts.length - 1]) use.push(pts[pts.length - 1]);
+  trailMesh.geometry.dispose();
+  trailMesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(use), Math.min(240, use.length * 2), 0.011, 6, false);
+  trailMesh.visible = true;
+}
+// Read how the phone is held from gravity, and map it onto a square driver at address.
+function calibrate() {
+  RIG = rig();
+  const Q0 = new THREE.Quaternion();
+  let ok = false;
+  if (SWG.gravN > 3) {
+    const up = SWG.grav.clone().normalize();
+    if (up.y < 0) up.negate(); // the phone's top edge sits higher than its bottom at address
+    const Yp = new THREE.Vector3(0, 1, 0);
+    const h = Yp.clone().addScaledVector(up, -Yp.dot(up));
+    if (h.length() > 0.15) {
+      h.normalize();
+      const P = new THREE.Matrix4().makeBasis(h, up, new THREE.Vector3().crossVectors(h, up));
+      const hw = new THREE.Vector3(RIG.s, 0, 0), uw = new THREE.Vector3(0, 1, 0);
+      const W = new THREE.Matrix4().makeBasis(hw, uw, new THREE.Vector3().crossVectors(hw, uw));
+      Q0.setFromRotationMatrix(W.multiply(P.transpose()));
+      ok = true;
+    }
+  }
+  if (!ok) { // assume screen faces the target
+    const Yw = RIG.d0.clone().negate(), Zw = new THREE.Vector3(0, 0, -1);
+    const Xw = new THREE.Vector3().crossVectors(Yw, Zw).normalize(); Zw.crossVectors(Xw, Yw);
+    Q0.setFromRotationMatrix(new THREE.Matrix4().makeBasis(Xw, Yw, Zw));
+  }
+  const dm = new THREE.Vector3(0, -1, 0).applyQuaternion(Q0);
+  SWG.Q0.setFromUnitVectors(dm, RIG.d0).multiply(Q0);
+  SWG.Q0inv.copy(SWG.Q0).invert();
+  SWG.faceP.set(0, 0, -1).applyQuaternion(SWG.Q0inv);
+  SWG.qRel.identity();
+  updateClub();
+}
+const _dq = new THREE.Quaternion(), _ax = new THREE.Vector3(), _qW = new THREE.Quaternion(), _delta = new THREE.Quaternion(), _fn = new THREE.Vector3();
+function updateClub() {
+  _qW.copy(SWG.Q0).multiply(SWG.qRel);
+  _delta.copy(_qW).multiply(SWG.Q0inv);
+  clubGroup.quaternion.copy(_delta);
+  SWG.prevHead.copy(SWG.head);
+  SWG.head.copy(RIG.d0).multiplyScalar(LEVER).applyQuaternion(_delta).add(RIG.C);
+}
+function faceAngle() { _fn.copy(SWG.faceP).applyQuaternion(_qW); return Math.atan2(_fn.x, -_fn.z) * 180 / Math.PI; }
+function resetClubPose() { SWG.qRel.identity(); updateClub(); }
+
 let mode = null; // 'motion' | 'swipe'
-const M = { state: 'off', last: 0, still: 0, back: [0, 0, 0], backStart: 0, top: 0, peak: 0, peakT: 0, twist: 0, twistAtPeak: 0, rateAtPeak: 0, lastEvent: 0, below: 0 };
+const M = { state: 'off', last: 0, still: 0, back: [0, 0, 0], backStart: 0, top: 0, peak: 0, peakT: 0, lastEvent: 0, below: 0 };
 function armMotion() {
   M.state = 'settle'; M.still = 0;
+  clubGroup.visible = true;
   setStatus('warn', 'Take your address and hold still');
 }
 function onMotion(e) {
@@ -695,62 +817,98 @@ function onMotion(e) {
   const now = performance.now();
   M.lastEvent = now;
   if (r.alpha == null && r.beta == null && r.gamma == null) return;
-  const w = [r.beta || 0, r.gamma || 0, r.alpha || 0]; // about phone x, y (long axis), z
+  const sg = settings.flip ? -1 : 1;
+  const w = [(r.beta || 0) * sg, (r.gamma || 0) * sg, (r.alpha || 0) * sg]; // about phone x, y (long axis), z; deg/s
   const dt = M.last ? Math.min(0.05, (now - M.last) / 1000) : 0.016; M.last = now;
   const mag = Math.hypot(w[0], w[1], w[2]);
+  if (M.state === 'off' || M.state === 'flight') return;
+  // Integrate the phone's rotation (body frame) into the club pose.
+  if (mag > 0.5) {
+    _ax.set(w[0], w[1], w[2]).normalize();
+    _dq.setFromAxisAngle(_ax, mag * Math.PI / 180 * dt);
+    SWG.qRel.multiply(_dq).normalize();
+  }
+  const g = e.accelerationIncludingGravity;
+  if (g && g.x != null && mag < 28) {
+    _fn.set(g.x, g.y, g.z);
+    if (SWG.gravN === 0) SWG.grav.copy(_fn); else SWG.grav.lerp(_fn, 0.12);
+    SWG.gravN++;
+  }
+  updateClub();
   switch (M.state) {
     case 'settle':
       M.still = mag < 28 ? M.still + dt : 0;
-      if (M.still > 0.7) { M.state = 'ready'; M.twist = 0; beep(880); setStatus('live', 'Ready. Swing when you like'); }
+      if (M.still > 0.7) {
+        calibrate();
+        SWG.trail = []; rebuildTrail();
+        M.state = 'ready'; beep(880); setStatus('live', 'Ready. Swing when you like');
+      }
       break;
     case 'ready':
-      M.twist += w[1] * dt;
-      if (mag > 90) { M.state = 'back'; M.backStart = now; M.back = [0, 0, 0]; M.below = 0; setStatus('live', 'Backswing…'); }
-      else if (mag < 28) M.twist *= 0.98; // bleed off drift while still
+      if (mag > 90) {
+        M.state = 'back'; M.backStart = now; M.back = [0, 0, 0]; M.below = 0;
+        SWG.trail = [SWG.head.clone()];
+        setStatus('live', 'Backswing…');
+      }
       break;
     case 'back': {
-      M.twist += w[1] * dt;
+      pushTrail();
       for (let i = 0; i < 3; i++) M.back[i] += w[i] * dt;
       const bl = Math.hypot(M.back[0], M.back[1], M.back[2]) || 1;
       const proj = (w[0] * M.back[0] + w[1] * M.back[1] + w[2] * M.back[2]) / bl;
       M.below = mag < 25 ? M.below + dt : 0;
       if (now - M.backStart > 180 && bl > 35 && proj < -60) {
-        M.state = 'down'; M.top = now; M.peak = 0;
+        M.state = 'down'; M.top = now; M.peak = 0; SWG.best = null; SWG.crossed = false; SWG.prevSample = null;
         M.backDir = M.back.map(x => x / bl);
       } else if (M.below > 1.6 || now - M.backStart > 5000) armMotion();
       break;
     }
     case 'down': {
-      M.twist += w[1] * dt;
+      pushTrail();
       const s = -(w[0] * M.backDir[0] + w[1] * M.backDir[1] + w[2] * M.backDir[2]);
-      if (s > M.peak) { M.peak = s; M.peakT = now; M.twistAtPeak = M.twist; M.rateAtPeak = w[1]; }
+      if (s > M.peak) { M.peak = s; M.peakT = now; }
+      // Impact = the moment the virtual clubhead passes the ball along the target line,
+      // interpolated between sensor samples (a fast downswing turns ~15° per sample).
+      const vx = SWG.head.x - SWG.prevHead.x, vz = SWG.head.z - SWG.prevHead.z;
+      const chordPath = Math.hypot(vx, vz) > 1e-4 ? Math.atan2(vx, -vz) * 180 / Math.PI : 0;
+      const face = faceAngle(), z = SWG.head.z - BALL_AT.z;
+      const prev = SWG.prevSample;
+      if (!SWG.crossed && prev && prev.z > 0 && z <= 0 && SWG.head.y < 0.6) {
+        const f = prev.z / (prev.z - z);
+        SWG.best = { face: prev.face + (face - prev.face) * f, path: Math.abs(chordPath) > 60 ? 0 : chordPath, dist: 0 };
+        SWG.crossed = true;
+      }
+      const dist = SWG.head.distanceTo(BALL_AT);
+      if (!SWG.crossed && (!SWG.best || dist < SWG.best.dist)) SWG.best = { dist, face, path: Math.abs(chordPath) > 60 ? 0 : chordPath };
+      SWG.prevSample = { z, face };
       if (M.peak > 220 && s < M.peak * 0.45) finishMotionSwing();
       else if (now - M.top > 1600) { setStatus('warn', 'Too slow to read. Hold still to reset'); armMotion(); }
       break;
     }
   }
 }
+function pushTrail() {
+  const last = SWG.trail[SWG.trail.length - 1];
+  if (!last || last.distanceTo(SWG.head) > 0.01) SWG.trail.push(SWG.head.clone());
+  if (SWG.trail.length > 600) SWG.trail.shift();
+  if (++SWG.trailTick % 3 === 0) rebuildTrail();
+}
 function finishMotionSwing() {
   M.state = 'flight';
+  rebuildTrail();
   const omega = M.peak * Math.PI / 180; // rad/s
   const clubMph = omega * club.rad * 2.237 * settings.assist;
   const backT = (M.top - M.backStart) / 1000, downT = Math.max(0.05, (M.peakT - M.top) / 1000);
-  const tempo = backT / downT;
-  // Personal baseline so your normal swing is straight.
-  const tw = M.twistAtPeak, rate = M.rateAtPeak;
-  if (!baseline) baseline = { twist: tw, rate, n: 1 };
-  const dTw = tw - baseline.twist, dRate = rate - baseline.rate;
-  baseline.n = Math.min(baseline.n + 1, 8);
-  const a = 1 / baseline.n;
-  baseline.twist += (tw - baseline.twist) * a; baseline.rate += (rate - baseline.rate) * a;
-  store.set('baseline', baseline);
-  const flip = settings.flip ? -1 : 1;
-  const faceDeg = clamp(dTw * 0.18, -12, 12) * settings.shape;
-  const curve = clamp(-dRate / 900, -1, 1) * settings.shape * flip;
-  hitShot({ clubMph, faceDeg, curve, tempo: clamp(tempo, 0.5, 9) });
+  const b = SWG.best || { face: 0, path: 0 };
+  const faceDeg = clamp(b.face * settings.shape, -15, 15);
+  const pathDeg = clamp(b.path * settings.shape, -15, 15);
+  hitShot({ clubMph, faceDeg, pathDeg, tempo: clamp(backT / downT, 0.5, 9) });
 }
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
+function cancelDemo() {
+  if (flight && flight.demo) { addLandMark(flight.shot.sim.carryPos, 0xffffff); flight = null; ball.position.set(0, 0.0514, 0); }
+}
 async function startMotion() {
   audio(); keepAwake();
   if (typeof DeviceMotionEvent === 'undefined') return motionUnavailable('This browser has no motion sensors.');
@@ -762,7 +920,9 @@ async function startMotion() {
   } catch (err) { return motionUnavailable('Motion access is blocked in this view.'); }
   window.removeEventListener('devicemotion', onMotion);
   window.addEventListener('devicemotion', onMotion);
+  cancelDemo();
   mode = 'motion'; M.lastEvent = 0;
+  buildClub(); calibrate();
   $('motionBtn').textContent = 'Re-address';
   $('hint').textContent = 'Beep = ball teed up. Swing smooth. Next ball tees up on its own.';
   if (!busy) armMotion();
@@ -779,7 +939,9 @@ function motionUnavailable(why) {
 // ---------- Swipe swing ----------
 const sw = { canvas: $('swipe'), ctx: $('swipe').getContext('2d'), pts: [], active: false };
 function useSwipe(keepStatus) {
+  cancelDemo();
   mode = 'swipe';
+  clubGroup.visible = false; trailMesh.visible = false;
   window.removeEventListener('devicemotion', onMotion);
   M.state = 'off';
   $('motionBtn').textContent = 'Swing with phone';
@@ -826,9 +988,8 @@ function endSwipe(e) {
   const a1 = Math.atan2(mid.x - p[top].x, p[top].y - mid.y + 1e-6), a2 = Math.atan2(end.x - mid.x, mid.y - end.y + 1e-6);
   const bend = clamp((a2 - a1) * 180 / Math.PI / 30, -1, 1);
   const tempo = (p[top].t - p[0].t) / Math.max(30, end.t - p[top].t);
-  // In swipe mode handedness is irrelevant; undo the sign launchFromSwing applies.
-  const hs = settings.hand === 'L' ? -1 : 1;
-  hitShot({ clubMph, faceDeg: clamp(ang * 0.4, -12, 12) * hs, curve: bend * 0.8 * settings.shape * hs, tempo: clamp(tempo, 0.3, 9) });
+  const faceDeg = clamp(ang * 0.4, -12, 12);
+  hitShot({ clubMph, faceDeg, pathDeg: faceDeg - bend * 10 * settings.shape, tempo: clamp(tempo, 0.3, 9) });
 }
 function drawSwipe() {
   const c = sw.ctx, d = window.devicePixelRatio || 1, p = sw.pts;
@@ -862,6 +1023,7 @@ function bindSeg(id, key, parse) {
     const b = e.target.closest('button'); if (!b) return;
     settings[key] = parse(b.dataset.v); saveSettings(); paint();
     if (key === 'wind') rollWind();
+    if (key === 'hand' && mode === 'motion') { buildClub(); calibrate(); SWG.trail = []; rebuildTrail(); if (!busy) armMotion(); }
   });
   paint();
 }
@@ -874,7 +1036,6 @@ const paintVals = () => { $('assistVal').textContent = (+settings.assist).toFixe
 assist.addEventListener('input', () => { settings.assist = +assist.value; saveSettings(); paintVals(); });
 shapeS.addEventListener('input', () => { settings.shape = +shapeS.value; saveSettings(); paintVals(); });
 paintVals();
-$('recal').addEventListener('click', () => { baseline = null; store.set('baseline', null); toast('Baseline reset'); });
 
 const openSheet = (id) => { $(id).hidden = false; };
 const closeSheet = (id) => { $(id).hidden = true; };
@@ -904,7 +1065,7 @@ function renderShots() {
 }
 
 // ---------- Main loop ----------
-const tmpPos = new THREE.Vector3(), tmpLook = new THREE.Vector3();
+const tmpPos = new THREE.Vector3(), tmpLook = new THREE.Vector3(), tmpUp = new THREE.Vector3(0, 1, 0);
 let lastT = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
@@ -921,10 +1082,25 @@ function frame(now) {
     tmpLook.set(b.x, b.y * 0.8 - 3, b.z - 10);
     const k = 1 - Math.exp(-dt * 2.6);
     camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, 1 - Math.exp(-dt * 6));
+  } else if (mode === 'motion') {
+    // At address: the golfer's eyes looking down at the ball. During the swing: pull back above
+    // the golfer's head so the whole arc stays on screen.
+    const swinging = M.state === 'back' || M.state === 'down';
+    const k = 1 - Math.exp(-dt * (swinging ? 5 : 2.2));
+    if (swinging) { tmpPos.set(RIG.C.x * 1.3, 6.4, 0.35); tmpLook.set(-RIG.s * 0.15, 0.4, 0.2); }
+    else { tmpPos.set(RIG.C.x * 0.72, 1.78, 0); tmpLook.set(-RIG.s * 0.12, 0, 0); }
+    camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, k);
   } else {
     const k = 1 - Math.exp(-dt * 2.2);
     camera.position.lerp(ADDRESS_POS, k); camLook.lerp(ADDRESS_LOOK, k);
   }
+  clubGroup.visible = mode === 'motion' && !flight;
+  // Address view: screen-up points away from the golfer, so the target sits to the left (right for lefties).
+  const pov = mode === 'motion' && !flight;
+  tmpUp.set(pov ? -RIG.s : 0, pov ? 0.25 : 1, 0).normalize();
+  camera.up.lerp(tmpUp, 1 - Math.exp(-dt * 3)).normalize();
+  const wantFov = pov ? (camera.aspect < 1 ? 92 : 72) : (camera.aspect < 1 ? 68 : 52);
+  if (Math.abs(camera.fov - wantFov) > 0.05) { camera.fov += (wantFov - camera.fov) * (1 - Math.exp(-dt * 3)); camera.updateProjectionMatrix(); }
   camera.lookAt(camLook);
   const camD = camera.position.distanceTo(ball.position);
   const s = Math.max(1, camD * 0.3);
@@ -941,7 +1117,7 @@ if (shots.length) setStatus('', `${shots.length} shots in this session. Pick a s
 setTimeout(() => {
   if (busy || mode) return;
   const prev = club; club = CLUBS[0];
-  const shot = launchFromSwing({ clubMph: 104, faceDeg: -1, curve: -0.25, tempo: 3 });
+  const shot = launchFromSwing({ clubMph: 104, faceDeg: -1, pathDeg: 1.5, tempo: 3 });
   club = prev; flight = { shot, t: 0, tracer: addTracer(0xffffff), landed: false, done: false, demo: true };
   setTimeout(() => { if (flight && flight.demo) { addLandMark(shot.sim.carryPos, 0xffffff); flight = null; } }, shot.sim.pts.length * shot.sim.dt * 1000 + 300);
 }, 900);

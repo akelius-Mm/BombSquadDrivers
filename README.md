@@ -21,23 +21,27 @@ For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url
 
 ## How to swing
 
-1. Grip the phone in both hands like a club: long edge along the shaft, top edge toward your belt buckle, screen facing the target.
-2. Tap **Swing with phone**, set up at address and hold still. A beep means the ball is teed up.
-3. Take it back and swing through. After the ball lands, the next one tees up on its own, so you can keep the phone in your hands.
+1. Grip the phone in both hands like a club: long edge along the shaft, top edge toward your belt buckle. The screen can face you so you can watch.
+2. Tap **Swing with phone**, set up at address and hold still. The game reads how you are holding the phone from gravity, squares a virtual driver to the target, and beeps.
+3. Swing. From your point of view you see the driver and your hands follow the phone, and a yellow trail traces the clubhead's path.
+4. After the ball lands, the trail stays on screen so you can check your path, and the next ball tees up on its own.
 
 **Safety:** use a wrist strap or a firm two-handed grip, and clear the room. Swing smooth. **Power assist** in settings scales a gentle indoor swing up to full-shot club speeds.
 
 ## What the sensors measure
 
+The gyroscope is integrated into the phone's orientation, starting from the calibrated address pose. That orientation drives a simple model of your arms and the club pivoting around your chest.
+
 | Reading | How it is calculated |
 | --- | --- |
 | Club speed | Peak angular speed of the hands in the downswing × the club's swing radius × power assist |
-| Face angle | How far your hands rotated around the shaft axis between address and impact, compared with your own baseline |
-| Curve (draw/fade) | How fast the face is rotating through impact, compared with your baseline |
+| Face angle | Where the virtual clubface points at the moment the clubhead is closest to the ball |
+| Club path | The direction the virtual clubhead is moving at that moment (in-to-out or out-to-in) |
+| Start line and curve | Start line is about 78% face and 22% path. Curve comes from face minus path, as on a launch monitor |
 | Tempo | Backswing time ÷ downswing time. Tour players average about 3:1, and tempo far from that costs strike quality |
 
-Your first swings set a personal baseline, so your normal swing flies straight and changes from it shape the ball.
-If slices come out as hooks for your grip, turn on **Flip curve direction**. **Reset baseline** starts over.
+The result card draws a top-down impact diagram: the dashed target line, your path (yellow arrow) and the face (red line), with angles doubled so they are easy to see.
+If the on-screen club moves the opposite way to your hands on your phone, turn on **Reverse club motion** in settings.
 
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
