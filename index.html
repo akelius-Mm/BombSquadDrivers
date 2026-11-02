@@ -221,7 +221,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <button class="primary" id="motionBtn">Swing with phone</button>
     <button class="secondary" id="swipeBtn">Swipe</button>
   </div>
-  <div class="hint" id="hint">Hold your phone like a club grip and swing. Strap on, room clear.</div>
+  <div class="hint" id="hint">Hold your phone upright like a club grip, screen facing you, and swing. Strap on, room clear.</div>
 </footer>
 
 <div class="sheet-wrap" id="settingsSheet" hidden>
@@ -229,7 +229,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <h2 id="setTitle">How to swing your phone</h2>
     <div class="warn-box">Wear a wrist strap or grip the phone with both hands, and clear the room. Swing smooth, not hard: the power assist below turns a living-room swing into a full shot.</div>
     <ol>
-      <li>Turn on Portrait Orientation Lock. Hold the phone in both hands like a club grip, long edge along the shaft and top edge toward your belt buckle. The screen can face you so you can watch the club.</li>
+      <li>Turn on Portrait Orientation Lock. Hold the phone upright in both hands like a club grip, long edge along the shaft, screen facing you. Either end can point up.</li>
       <li>Tap <b>Swing with phone</b>, take your address and hold still. The game reads how you are holding the phone, squares the virtual driver to the target and beeps.</li>
       <li>Swing. The driver on screen follows your hands and draws the clubhead's path. Speed sets distance; face and path at impact set the start line and curve.</li>
       <li>The yellow trail stays on screen after the shot so you can check your path. The next ball tees up on its own.</li>
@@ -238,9 +238,10 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <div class="row"><label>Handed</label><div class="seg" id="handSeg"><button data-v="R" aria-pressed="true">Right</button><button data-v="L" aria-pressed="false">Left</button></div></div>
     <div class="row"><label for="assist">Power assist</label><input type="range" id="assist" min="1" max="2.6" step="0.05" value="1.3"><span class="val" id="assistVal">1.30×</span></div>
     <div class="row"><label for="shapeSens">Shot-shape strength</label><input type="range" id="shapeSens" min="0" max="2" step="0.1" value="1"><span class="val" id="shapeVal">1.0×</span></div>
+    <div class="row"><label>Screen faces</label><div class="seg" id="screenSeg"><button data-v="me" aria-pressed="true">Me</button><button data-v="target" aria-pressed="false">Target</button></div></div>
     <div class="row"><label>Reverse club motion</label><div class="seg" id="flipSeg"><button data-v="0" aria-pressed="true">Off</button><button data-v="1" aria-pressed="false">On</button></div></div>
     <div class="row"><label>Wind</label><div class="seg" id="windSeg"><button data-v="0" aria-pressed="false">Calm</button><button data-v="1" aria-pressed="true">Breezy</button></div></div>
-    <p style="color:var(--muted)">If the on-screen club moves the opposite way to your hands, turn on Reverse club motion. Phone swing needs this page opened on its own (https) in Safari or Chrome. Inside an embedded preview, use Swipe.</p>
+    <p style="color:var(--muted)">Holding the phone with the screen toward the target instead? Set Screen faces to Target. If the on-screen club still moves the opposite way to your hands, turn on Reverse club motion. Phone swing needs this page opened on its own (https) in Safari or Chrome. Inside an embedded preview, use Swipe.</p>
     <div class="sheet-actions"><button class="primary" id="closeSettings">Done</button></div>
   </div>
 </div>
@@ -281,7 +282,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('pocketRange.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('pocketRange.' + k, JSON.stringify(v)); } catch (e) {} },
 };
-const settings = Object.assign({ hand: 'R', assist: 1.3, shape: 1, flip: 0, wind: 1, club: 'DR' }, store.get('settings', {}));
+const settings = Object.assign({ hand: 'R', assist: 1.3, shape: 1, flip: 0, wind: 1, club: 'DR', screen: 'me' }, store.get('settings', {}));
 let shots = store.get('shots', []);
 const saveSettings = () => store.set('settings', settings);
 let club = CLUBS.find(c => c.id === settings.club) || CLUBS[0];
@@ -1007,7 +1008,7 @@ const SWG = {
   qRel: new THREE.Quaternion(), Q0: new THREE.Quaternion(), Q0inv: new THREE.Quaternion(),
   faceP: new THREE.Vector3(0, 0, -1), grav: new THREE.Vector3(), gravN: 0,
   head: new THREE.Vector3(), prevHead: new THREE.Vector3(), best: null, trail: [], trailTick: 0,
-  lastW: new THREE.Vector3(), lastWT: 0, gSign: 0,
+  lastW: new THREE.Vector3(), lastWT: 0, gSign: 0, flipEnd: false, ori: new THREE.Vector3(), oriT: 0, gravSrc: null, calSrc: null,
 };
 function rig() {
   const s = settings.hand === 'L' ? 1 : -1; // side of the ball the golfer stands on (x)
@@ -1134,29 +1135,36 @@ function rebuildTrail() {
   trailMesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(use), Math.min(240, use.length * 2), 0.011, 6, false);
   trailMesh.visible = true;
 }
-// Read how the phone is held from gravity, and map it onto a square driver at address.
+// Read how the phone is held, and map it onto a square driver at address. Everything below works in a
+// "grip frame": the phone frame, turned end-for-end if the phone is held top-down, so +Y always runs
+// up the shaft toward the hands.
+function toGrip(v) { if (SWG.flipEnd) { v.x = -v.x; v.y = -v.y; } return v; }
 function calibrate() {
   RIG = rig();
   const Q0 = new THREE.Quaternion();
-  let ok = false;
+  let up = null;
   if (SWG.gravN > 3) {
-    const up = SWG.grav.clone().normalize();
-    SWG.gSign = up.y < 0 ? -1 : 1;
-    if (up.y < 0) up.negate(); // the phone's top edge sits higher than its bottom at address
-    const Yp = new THREE.Vector3(0, 1, 0);
-    const h = Yp.clone().addScaledVector(up, -Yp.dot(up));
-    if (h.length() > 0.15) {
-      h.normalize();
-      const P = new THREE.Matrix4().makeBasis(h, up, new THREE.Vector3().crossVectors(h, up));
-      const hw = new THREE.Vector3(RIG.s, 0, 0), uw = new THREE.Vector3(0, 1, 0);
-      const W = new THREE.Matrix4().makeBasis(hw, uw, new THREE.Vector3().crossVectors(hw, uw));
-      Q0.setFromRotationMatrix(W.multiply(P.transpose()));
-      ok = true;
-    }
+    up = SWG.grav.clone().normalize();
+    if (SWG.gravSrc === 'ori') { SWG.flipEnd = up.y < 0; toGrip(up); SWG.gSign = 0; }
+    else { SWG.flipEnd = false; SWG.gSign = up.y < 0 ? -1 : 1; if (up.y < 0) up.negate(); } // raw accelerometer sign differs by platform
   }
-  if (!ok) { // assume screen faces the target
-    const Yw = RIG.d0.clone().negate(), Zw = new THREE.Vector3(0, 0, -1);
-    const Xw = new THREE.Vector3().crossVectors(Yw, Zw).normalize(); Zw.crossVectors(Xw, Yw);
+  SWG.calSrc = SWG.gravSrc;
+  const Yp = new THREE.Vector3(0, 1, 0);
+  const h = up ? Yp.clone().addScaledVector(up, -Yp.dot(up)) : new THREE.Vector3();
+  if (up && h.length() > 0.42) {
+    // Phone leans with the shaft: the lean tells which way it is rolled.
+    h.normalize();
+    const P = new THREE.Matrix4().makeBasis(h, up, new THREE.Vector3().crossVectors(h, up));
+    const hw = new THREE.Vector3(RIG.s, 0, 0), uw = new THREE.Vector3(0, 1, 0);
+    const W = new THREE.Matrix4().makeBasis(hw, uw, new THREE.Vector3().crossVectors(hw, uw));
+    Q0.setFromRotationMatrix(W.multiply(P.transpose()));
+  } else {
+    // Phone held (nearly) upright: gravity can't tell which way the screen faces, so use the setting.
+    const Yw = RIG.d0.clone().negate();
+    let Zw;
+    if (settings.screen === 'target') Zw = new THREE.Vector3(0, 0, -1);
+    else { Zw = new THREE.Vector3(Yw.y, -Yw.x, 0); if (Zw.y < 0) Zw.negate(); } // screen tilted up toward your eyes
+    const Xw = new THREE.Vector3().crossVectors(Yw, Zw).normalize(); Zw.crossVectors(Xw, Yw).normalize();
     Q0.setFromRotationMatrix(new THREE.Matrix4().makeBasis(Xw, Yw, Zw));
   }
   const dm = new THREE.Vector3(0, -1, 0).applyQuaternion(Q0);
@@ -1165,6 +1173,13 @@ function calibrate() {
   SWG.faceP.set(0, 0, -1).applyQuaternion(SWG.Q0inv);
   SWG.qRel.identity();
   updateClub();
+}
+// The OS's fused orientation gives an unambiguous "up" in the phone's own axes.
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  const bt = e.beta * Math.PI / 180, gm = e.gamma * Math.PI / 180;
+  SWG.ori.set(-Math.sin(gm) * Math.cos(bt), Math.sin(bt), Math.cos(gm) * Math.cos(bt));
+  SWG.oriT = performance.now();
 }
 const _gv = new THREE.Vector3(), _ue = new THREE.Vector3(), _qInv = new THREE.Quaternion(), _r = new THREE.Quaternion(), _rp = new THREE.Quaternion();
 const _dq = new THREE.Quaternion(), _ax = new THREE.Vector3(), _qW = new THREE.Quaternion(), _delta = new THREE.Quaternion(), _fn = new THREE.Vector3();
@@ -1191,7 +1206,8 @@ function onMotion(e) {
   M.lastEvent = now;
   if (r.alpha == null && r.beta == null && r.gamma == null) return;
   const sg = settings.flip ? -1 : 1;
-  const w = [(r.beta || 0) * sg, (r.gamma || 0) * sg, (r.alpha || 0) * sg]; // about phone x, y (long axis), z; deg/s
+  const fe = SWG.flipEnd ? -1 : 1;
+  const w = [(r.beta || 0) * sg * fe, (r.gamma || 0) * sg * fe, (r.alpha || 0) * sg]; // grip frame: about x, y (shaft), z; deg/s
   const dt = M.last ? Math.min(0.05, (now - M.last) / 1000) : 0.016; M.last = now;
   const mag = Math.hypot(w[0], w[1], w[2]);
   if (M.state === 'off') return;
@@ -1202,24 +1218,29 @@ function onMotion(e) {
     SWG.qRel.multiply(_dq).normalize();
   }
   SWG.lastW.set(w[0], w[1], w[2]).multiplyScalar(Math.PI / 180); SWG.lastWT = now;
-  const g = e.accelerationIncludingGravity;
+  // Where is "up" in the phone's axes? Prefer the OS orientation sensor; fall back to the accelerometer.
+  let src = null;
+  if (SWG.oriT && now - SWG.oriT < 250) { _gv.copy(SWG.ori); src = 'ori'; }
+  else {
+    const g = e.accelerationIncludingGravity;
+    if (g && g.x != null) { _gv.set(g.x, g.y, g.z); const gm = _gv.length(); if (gm > 7.8 && gm < 11.8) { _gv.divideScalar(gm); src = 'acc'; } }
+  }
+  if (src && mag < 28) { // collect a steady reading for calibration
+    if (src !== SWG.gravSrc) { SWG.gravSrc = src; SWG.gravN = 0; }
+    if (SWG.gravN === 0) SWG.grav.copy(_gv); else SWG.grav.lerp(_gv, 0.12);
+    SWG.gravN++;
+  }
   // Gyro drift correction: when the phone isn't being whipped around, nudge the club's tilt toward
-  // what gravity says, so waggles and long holds stay locked to your hands.
-  if (g && g.x != null && SWG.gSign && mag < 160) {
-    _gv.set(g.x, g.y, g.z); const gm = _gv.length();
-    if (gm > 7.8 && gm < 11.8) {
-      _gv.multiplyScalar(SWG.gSign / gm);
+  // the measured "up", so waggles and long holds stay locked to your hands.
+  if (src && src === SWG.calSrc && mag < 160) {
+    if (src === 'ori') toGrip(_gv); else _gv.multiplyScalar(SWG.gSign);
+    if (src === 'ori' || SWG.gSign) {
       _qW.copy(SWG.Q0).multiply(SWG.qRel);
       _ue.set(0, 1, 0).applyQuaternion(_qInv.copy(_qW).invert());
       _r.setFromUnitVectors(_gv, _ue);
       _rp.identity().slerp(_r, mag < 30 ? 0.08 : 0.025);
       SWG.qRel.multiply(_rp).normalize();
     }
-  }
-  if (g && g.x != null && mag < 28) {
-    _fn.set(g.x, g.y, g.z);
-    if (SWG.gravN === 0) SWG.grav.copy(_fn); else SWG.grav.lerp(_fn, 0.12);
-    SWG.gravN++;
   }
   updateClub();
   switch (M.state) {
@@ -1293,6 +1314,7 @@ function finishMotionSwing() {
   const b = SWG.best || { face: 0, path: 0 };
   const faceDeg = clamp(b.face * settings.shape, -15, 15);
   const pathDeg = clamp(b.path * settings.shape, -15, 15);
+  if (LOW) window.__lastSwing = { faceDeg, pathDeg, clubMph, crossed: !!SWG.crossed, flipEnd: SWG.flipEnd, src: SWG.calSrc };
   hitShot({ clubMph, faceDeg, pathDeg, tempo: clamp(backT / downT, 0.5, 9) });
 }
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -1303,14 +1325,21 @@ function cancelDemo() {
 async function startMotion() {
   audio(); keepAwake();
   if (typeof DeviceMotionEvent === 'undefined') return motionUnavailable('This browser has no motion sensors.');
-  try {
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      const res = await DeviceMotionEvent.requestPermission();
-      if (res !== 'granted') return motionUnavailable('Motion access was declined.');
-    }
-  } catch (err) { return motionUnavailable('Motion access is blocked in this view.'); }
+  // Ask for both sensors in the same tap (iOS needs each request inside the user gesture).
+  // Orientation only improves calibration, so never wait on it.
+  let motionAsk = null;
+  try { if (typeof DeviceMotionEvent.requestPermission === 'function') motionAsk = DeviceMotionEvent.requestPermission(); } catch (err) { return motionUnavailable('Motion access is blocked in this view.'); }
+  try { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') DeviceOrientationEvent.requestPermission().catch(() => {}); } catch (err) {}
+  window.removeEventListener('deviceorientation', onOrient);
+  window.addEventListener('deviceorientation', onOrient);
+  if (motionAsk) {
+    try { if ((await motionAsk) !== 'granted') return motionUnavailable('Motion access was declined.'); }
+    catch (err) { return motionUnavailable('Motion access is blocked in this view.'); }
+  }
   window.removeEventListener('devicemotion', onMotion);
   window.addEventListener('devicemotion', onMotion);
+  window.removeEventListener('deviceorientation', onOrient);
+  window.addEventListener('deviceorientation', onOrient);
   cancelDemo();
   mode = 'motion'; M.lastEvent = 0;
   buildClub(); calibrate();
@@ -1414,12 +1443,14 @@ function bindSeg(id, key, parse) {
     const b = e.target.closest('button'); if (!b) return;
     settings[key] = parse(b.dataset.v); saveSettings(); paint();
     if (key === 'wind') rollWind();
+    if (key === 'screen' && mode === 'motion' && !busy) armMotion();
     if (key === 'hand' && mode === 'motion') { buildClub(); calibrate(); SWG.trail = []; rebuildTrail(); if (!busy) armMotion(); }
   });
   paint();
 }
 bindSeg('handSeg', 'hand', v => v);
 bindSeg('flipSeg', 'flip', v => +v);
+bindSeg('screenSeg', 'screen', v => v);
 bindSeg('windSeg', 'wind', v => +v);
 const assist = $('assist'), shapeS = $('shapeSens');
 assist.value = settings.assist; shapeS.value = settings.shape;

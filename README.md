@@ -21,7 +21,7 @@ For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url
 
 ## How to swing
 
-1. Grip the phone in both hands like a club: long edge along the shaft, top edge toward your belt buckle. The screen can face you so you can watch.
+1. Turn on Portrait Orientation Lock. Hold the phone upright in both hands like a club grip, long edge along the shaft, screen facing you. Either end can point up. If you prefer the screen toward the target, set **Screen faces** to Target in settings.
 2. Tap **Swing with phone**, set up at address and hold still. The game reads how you are holding the phone from gravity, squares a virtual driver to the target, and beeps.
 3. Swing. From your point of view you see the driver and your hands follow the phone, and a yellow trail traces the clubhead's path.
 4. After the ball lands, the trail stays on screen so you can check your path, and the next ball tees up on its own.
@@ -41,7 +41,7 @@ The gyroscope is integrated into the phone's orientation, starting from the cali
 | Tempo | Backswing time ÷ downswing time. Tour players average about 3:1, and tempo far from that costs strike quality |
 
 The result card draws a top-down impact diagram: the dashed target line, your path (yellow arrow) and the face (red line), with angles doubled so they are easy to see.
-If the on-screen club moves the opposite way to your hands on your phone, turn on **Reverse club motion** in settings.
+The game reads which way up the phone is from the phone's orientation sensor. When the phone is upright, gravity can't show which way the screen faces, so the **Screen faces** setting fills that in. If the on-screen club still moves the opposite way to your hands, turn on **Reverse club motion** in settings.
 
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
