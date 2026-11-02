@@ -41,7 +41,7 @@ The gyroscope is integrated into the phone's orientation, starting from the cali
 | Tempo | Backswing time ÷ downswing time. Tour players average about 3:1, and tempo far from that costs strike quality |
 
 The result card draws a top-down impact diagram: the dashed target line, your path (yellow arrow) and the face (red line), with angles doubled so they are easy to see.
-The game reads which way up the phone is from the phone's orientation sensor. When the phone is upright, gravity can't show which way the screen faces, so the **Screen faces** setting fills that in. If the on-screen club still moves the opposite way to your hands, turn on **Reverse club motion** in settings.
+Your first backswing teaches the game how you hold the phone: it checks which way the phone actually turned and lines the on-screen swing up with it, so the club follows you whichever way the screen faces or whichever end is up. **Re-learn my grip** in settings starts that over. The game reads which way up the phone is from the phone's orientation sensor. When the phone is upright, gravity can't show which way the screen faces, so the **Screen faces** setting fills that in. If the on-screen club still moves the opposite way to your hands, turn on **Reverse club motion** in settings.
 
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
