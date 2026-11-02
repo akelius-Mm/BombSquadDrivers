@@ -46,6 +46,12 @@ If the on-screen club moves the opposite way to your hands on your phone, turn o
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
 
+## Graphics
+
+The range is rendered with three.js r160: a physically based sky with drifting clouds, a sun that casts real shadows on the mat and club, sky reflections on the clubhead and ball, ACES filmic tone mapping, 150,000 swaying grass blades around the tee, mowed stripes, domed greens with bunkers and waving flags, layered tree lines and hills in the haze.
+Everything is generated in code, so no image or model files are needed.
+Add `?q=low` to the address for a lighter version on older phones.
+
 ## No motion sensors?
 
 Tap **Swipe**: drag down on the screen for the backswing, then flick up through the ball. Flick speed sets power, and a sideways flick or a curved path shapes the shot.
