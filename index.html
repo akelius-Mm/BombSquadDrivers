@@ -910,7 +910,7 @@ function onBallStopped(shot) {
   setTimeout(() => {
     busy = false;
     flight = null;
-    if (mode === 'motion') { resetClubPose(); armMotion(); }
+    if (mode === 'motion') armMotion();
     else setStatus('', 'Drag down, then flick up to swing');
   }, 2600);
 }
@@ -1007,6 +1007,7 @@ const SWG = {
   qRel: new THREE.Quaternion(), Q0: new THREE.Quaternion(), Q0inv: new THREE.Quaternion(),
   faceP: new THREE.Vector3(0, 0, -1), grav: new THREE.Vector3(), gravN: 0,
   head: new THREE.Vector3(), prevHead: new THREE.Vector3(), best: null, trail: [], trailTick: 0,
+  lastW: new THREE.Vector3(), lastWT: 0, gSign: 0,
 };
 function rig() {
   const s = settings.hand === 'L' ? 1 : -1; // side of the ball the golfer stands on (x)
@@ -1140,6 +1141,7 @@ function calibrate() {
   let ok = false;
   if (SWG.gravN > 3) {
     const up = SWG.grav.clone().normalize();
+    SWG.gSign = up.y < 0 ? -1 : 1;
     if (up.y < 0) up.negate(); // the phone's top edge sits higher than its bottom at address
     const Yp = new THREE.Vector3(0, 1, 0);
     const h = Yp.clone().addScaledVector(up, -Yp.dot(up));
@@ -1164,6 +1166,7 @@ function calibrate() {
   SWG.qRel.identity();
   updateClub();
 }
+const _gv = new THREE.Vector3(), _ue = new THREE.Vector3(), _qInv = new THREE.Quaternion(), _r = new THREE.Quaternion(), _rp = new THREE.Quaternion();
 const _dq = new THREE.Quaternion(), _ax = new THREE.Vector3(), _qW = new THREE.Quaternion(), _delta = new THREE.Quaternion(), _fn = new THREE.Vector3();
 function updateClub() {
   _qW.copy(SWG.Q0).multiply(SWG.qRel);
@@ -1191,14 +1194,28 @@ function onMotion(e) {
   const w = [(r.beta || 0) * sg, (r.gamma || 0) * sg, (r.alpha || 0) * sg]; // about phone x, y (long axis), z; deg/s
   const dt = M.last ? Math.min(0.05, (now - M.last) / 1000) : 0.016; M.last = now;
   const mag = Math.hypot(w[0], w[1], w[2]);
-  if (M.state === 'off' || M.state === 'flight') return;
+  if (M.state === 'off') return;
   // Integrate the phone's rotation (body frame) into the club pose.
   if (mag > 0.5) {
     _ax.set(w[0], w[1], w[2]).normalize();
     _dq.setFromAxisAngle(_ax, mag * Math.PI / 180 * dt);
     SWG.qRel.multiply(_dq).normalize();
   }
+  SWG.lastW.set(w[0], w[1], w[2]).multiplyScalar(Math.PI / 180); SWG.lastWT = now;
   const g = e.accelerationIncludingGravity;
+  // Gyro drift correction: when the phone isn't being whipped around, nudge the club's tilt toward
+  // what gravity says, so waggles and long holds stay locked to your hands.
+  if (g && g.x != null && SWG.gSign && mag < 160) {
+    _gv.set(g.x, g.y, g.z); const gm = _gv.length();
+    if (gm > 7.8 && gm < 11.8) {
+      _gv.multiplyScalar(SWG.gSign / gm);
+      _qW.copy(SWG.Q0).multiply(SWG.qRel);
+      _ue.set(0, 1, 0).applyQuaternion(_qInv.copy(_qW).invert());
+      _r.setFromUnitVectors(_gv, _ue);
+      _rp.identity().slerp(_r, mag < 30 ? 0.08 : 0.025);
+      SWG.qRel.multiply(_rp).normalize();
+    }
+  }
   if (g && g.x != null && mag < 28) {
     _fn.set(g.x, g.y, g.z);
     if (SWG.gravN === 0) SWG.grav.copy(_fn); else SWG.grav.lerp(_fn, 0.12);
@@ -1216,9 +1233,8 @@ function onMotion(e) {
       break;
     case 'ready':
       if (mag > 90) {
-        M.state = 'back'; M.backStart = now; M.back = [0, 0, 0]; M.below = 0;
+        M.state = 'back'; M.backStart = now; M.back = [0, 0, 0]; M.below = 0; M.committed = false;
         SWG.trail = [SWG.head.clone()];
-        setStatus('live', 'Backswing…');
       }
       break;
     case 'back': {
@@ -1227,10 +1243,15 @@ function onMotion(e) {
       const bl = Math.hypot(M.back[0], M.back[1], M.back[2]) || 1;
       const proj = (w[0] * M.back[0] + w[1] * M.back[1] + w[2] * M.back[2]) / bl;
       M.below = mag < 25 ? M.below + dt : 0;
-      if (now - M.backStart > 180 && bl > 35 && proj < -60) {
-        M.state = 'down'; M.top = now; M.peak = 0; SWG.best = null; SWG.crossed = false; SWG.prevSample = null;
-        M.backDir = M.back.map(x => x / bl);
-      } else if (M.below > 1.6 || now - M.backStart > 5000) armMotion();
+      // A real takeaway turns the club well past a waggle (~70°). Until then it's just a waggle.
+      if (!M.committed && bl > 70) { M.committed = true; setStatus('live', 'Backswing…'); }
+      if (proj < -60) {
+        if (M.committed && now - M.backStart > 180) {
+          M.state = 'down'; M.top = now; M.peak = 0; SWG.best = null; SWG.crossed = false; SWG.prevSample = null;
+          M.backDir = M.back.map(x => x / bl);
+        } else { M.state = 'ready'; } // waggle reversed: stay ready, keep tracking
+      } else if (!M.committed && M.below > 0.3) M.state = 'ready';
+      else if (M.below > 1.6 || now - M.backStart > 5000) armMotion();
       break;
     }
     case 'down': {
@@ -1261,7 +1282,7 @@ function pushTrail() {
   const last = SWG.trail[SWG.trail.length - 1];
   if (!last || last.distanceTo(SWG.head) > 0.01) SWG.trail.push(SWG.head.clone());
   if (SWG.trail.length > 600) SWG.trail.shift();
-  if (++SWG.trailTick % 3 === 0) rebuildTrail();
+  if ((M.committed || M.state === 'down') && ++SWG.trailTick % 3 === 0) rebuildTrail();
 }
 function finishMotionSwing() {
   M.state = 'flight';
@@ -1435,7 +1456,9 @@ function renderShots() {
 }
 
 // ---------- Main loop ----------
-const tmpPos = new THREE.Vector3(), tmpLook = new THREE.Vector3(), tmpUp = new THREE.Vector3(0, 1, 0);
+const tmpPos = new THREE.Vector3(), tmpLook = new THREE.Vector3(), tmpUp = new THREE.Vector3(0, 1, 0), _qPred = new THREE.Quaternion();
+const PR_MAX = Math.min(window.devicePixelRatio || 1, LOW ? 1 : 2.5);
+let pixelRatio = PR_MAX, ftAcc = 0, ftN = 0;
 let lastT = performance.now();
 function frame(now) {
   const realDt = Math.min(0.6, (now - lastT) / 1000), dt = Math.min(0.05, realDt); lastT = now;
@@ -1458,7 +1481,7 @@ function frame(now) {
   } else if (mode === 'motion') {
     // At address: the golfer's eyes looking down at the ball. During the swing: pull back above
     // the golfer's head so the whole arc stays on screen.
-    const swinging = M.state === 'back' || M.state === 'down';
+    const swinging = (M.state === 'back' && M.committed) || M.state === 'down';
     const k = 1 - Math.exp(-realDt * (swinging ? 5 : 2.2));
     if (swinging) { tmpPos.set(RIG.C.x * 1.3, 6.4, 0.35); tmpLook.set(-RIG.s * 0.15, 0.4, 0.2); }
     else { tmpPos.set(RIG.C.x * 0.72, 1.78, 0); tmpLook.set(-RIG.s * 0.12, 0, 0); }
@@ -1468,6 +1491,20 @@ function frame(now) {
     camera.position.lerp(ADDRESS_POS, k); camLook.lerp(ADDRESS_LOOK, k);
   }
   clubGroup.visible = mode === 'motion' && !flight;
+  // Sensors report ~60 times a second; predict the club forward to this exact frame so it moves
+  // smoothly and without lag on 90/120 Hz screens.
+  if (mode === 'motion' && M.state !== 'off' && SWG.lastWT) {
+    const ahead = Math.min(0.03, (performance.now() - SWG.lastWT) / 1000), wl = SWG.lastW.length();
+    _qPred.copy(SWG.qRel);
+    if (wl > 0.01 && ahead > 0) { _ax.copy(SWG.lastW).divideScalar(wl); _dq.setFromAxisAngle(_ax, wl * ahead); _qPred.multiply(_dq); }
+    clubGroup.quaternion.copy(SWG.Q0).multiply(_qPred).multiply(SWG.Q0inv);
+  }
+  ftAcc += realDt; ftN++;
+  if (ftN >= 40) {
+    const avg = ftAcc / ftN; ftAcc = 0; ftN = 0;
+    if (avg > 0.02 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.25); renderer.setPixelRatio(pixelRatio); resize(); }
+    else if (avg < 0.0115 && pixelRatio < PR_MAX) { pixelRatio = Math.min(PR_MAX, pixelRatio + 0.25); renderer.setPixelRatio(pixelRatio); resize(); }
+  }
   // Address view: screen-up points away from the golfer, so the target sits to the left (right for lefties).
   const pov = mode === 'motion' && !flight;
   tmpUp.set(pov ? -RIG.s : 0, pov ? 0.25 : 1, 0).normalize();
