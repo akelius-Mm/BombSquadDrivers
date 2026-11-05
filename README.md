@@ -19,6 +19,10 @@ Phone browsers only give motion sensors to pages served over **https**. The easi
 Any other https static host works too (Netlify, Cloudflare Pages, Vercel).
 For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url http://localhost:3000` gives you an https link to open on the phone.
 
+## Left-handed?
+
+Tap **Lefty** at the top left (next to Range / Putting). The golfer, club, putter, ball basket and stroke meter all mirror, and shot names follow your hand (a ball curving right is a draw for a left-hander). The setting is remembered and also lives in settings as **Handed**.
+
 ## How to swing
 
 1. Turn on Portrait Orientation Lock. Hold the phone upright in both hands like a club grip, long edge along the shaft, screen facing you. Either end can point up. If you prefer the screen toward the target, set **Screen faces** to Target in settings.

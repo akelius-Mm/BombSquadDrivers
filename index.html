@@ -217,6 +217,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <button class="icon-btn" id="openSettings" aria-label="Settings and how to swing"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
   <div class="row2">
+    <div class="seg gameseg" id="handQuick" role="group" aria-label="Golfer"><button data-v="R" aria-pressed="true">Righty</button><button data-v="L" aria-pressed="false">Lefty</button></div>
     <div class="seg gameseg" id="gameSeg" role="group" aria-label="Mode"><button data-v="range" aria-pressed="true">Range</button><button data-v="putt" aria-pressed="false">Putting</button></div>
     <nav class="clubs" id="clubs" aria-label="Club"></nav>
     <nav class="clubs" id="puttChips" aria-label="Putt distance or drill" hidden></nav>
@@ -646,6 +647,7 @@ for (let b = -3; b <= 3; b++) MAT_ZONES.push([b * 4.8, 0.25]);
 }
 
 // ---------- Hitting area: turf mats, rubber tee, ball basket ----------
+const basketGroup = new THREE.Group();
 const turfH = makeCanvas(1024, 1024, (g, w, h) => {
   g.fillStyle = '#777'; g.fillRect(0, 0, w, h);
   for (let i = 0; i < 90000; i++) {
@@ -691,10 +693,11 @@ const ballMat = new THREE.MeshPhysicalMaterial({ color: 0xf6f6f2, roughness: 0.4
   const wire = makeCanvas(128, 128, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.lineWidth = 7; for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 32, 0); g.lineTo(i * 32, h); g.stroke(); g.beginPath(); g.moveTo(0, i * 32); g.lineTo(w, i * 32); g.stroke(); } });
   const wireTex = texFrom(wire, { srgb: false, repeat: [8, 2] });
   const basketMat = new THREE.MeshStandardMaterial({ color: 0x9aa3ab, metalness: 0.9, roughness: 0.35, alphaMap: wireTex, alphaTest: 0.5, side: THREE.DoubleSide });
+  scene.add(basketGroup); // behind the golfer's back foot; mirrored for left-handers
   const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.14, 0.24, 32, 1, true), basketMat);
-  basket.position.set(0.9, 0.12 + 0.025, 0.7); basket.castShadow = true; scene.add(basket);
+  basket.position.set(0.9, 0.12 + 0.025, 0.7); basket.castShadow = true; basketGroup.add(basket);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.006, 8, 40), basketMat.clone()); rim.material.alphaMap = null; rim.material.alphaTest = 0;
-  rim.rotation.x = Math.PI / 2; rim.position.set(0.9, 0.265, 0.7); scene.add(rim);
+  rim.rotation.x = Math.PI / 2; rim.position.set(0.9, 0.265, 0.7); basketGroup.add(rim);
   const pile = new THREE.InstancedMesh(new THREE.SphereGeometry(0.0214, 20, 14), ballMat, 70);
   const m4 = new THREE.Matrix4();
   for (let i = 0; i < 70; i++) {
@@ -702,7 +705,7 @@ const ballMat = new THREE.MeshPhysicalMaterial({ color: 0xf6f6f2, roughness: 0.4
     m4.makeTranslation(0.9 + Math.cos(a) * rr, 0.215 + layer * 0.03 + Math.random() * 0.01, 0.7 + Math.sin(a) * rr);
     pile.setMatrixAt(i, m4);
   }
-  pile.castShadow = true; scene.add(pile);
+  pile.castShadow = true; basketGroup.add(pile);
 }
 
 // Range balls scattered downrange
@@ -1002,7 +1005,8 @@ function onBallStopped(shot) {
   }, 2600);
 }
 function shapeName(shot) {
-  const off = shot.sim.offlineYd, axis = shot.axis, dir = shot.dir;
+  // Named from the golfer's side: for a left-hander a ball curving right is a draw.
+  const m = shot.hand === 'L' ? -1 : 1, off = shot.sim.offlineYd, axis = shot.axis * m, dir = shot.dir * m;
   const startL = dir < -1.5, startR = dir > 1.5, curveL = axis < -4, curveR = axis > 4;
   if (Math.abs(off) < 4 && !curveL && !curveR) return 'Pure';
   if (startL && curveL) return 'Pull hook';
@@ -1636,11 +1640,25 @@ function bindSeg(id, key, parse) {
     if (key === 'stimp' && game === 'putt' && !busy) aimPutt();
     if (key === 'screen' || key === 'flip' || key === 'hand') resetGrip();
     if (key === 'screen' && mode === 'motion' && !busy) armMotion();
-    if (key === 'hand' && mode === 'motion') { buildClub(); calibrate(); SWG.trail = []; rebuildTrail(); if (!busy) armMotion(); }
+    if (key === 'hand') applyHand();
   });
   paint();
 }
 bindSeg('handSeg', 'hand', v => v);
+// Righty / Lefty: mirrors the golfer, club, putter, basket and stroke meter.
+function applyHand() {
+  basketGroup.scale.x = settings.hand === 'L' ? -1 : 1;
+  buildClub(); calibrate(); SWG.trail = []; rebuildTrail();
+  document.querySelectorAll('#handSeg button, #handQuick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.hand)));
+  if (mode === 'motion' && !busy) armMotion();
+}
+$('handQuick').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.dataset.v === settings.hand) return;
+  settings.hand = b.dataset.v; saveSettings(); resetGrip(); applyHand();
+  toast(settings.hand === 'L' ? 'Left-handed' : 'Right-handed');
+});
+basketGroup.scale.x = settings.hand === 'L' ? -1 : 1;
+document.querySelectorAll('#handQuick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.hand)));
 bindSeg('flipSeg', 'flip', v => +v);
 bindSeg('screenSeg', 'screen', v => v);
 bindSeg('viewSeg', 'view', v => v);
@@ -2021,7 +2039,7 @@ function updateMeter(flipWithView) {
   const tb = PUTT.targetBack || 0.1, tgt = $('meterTgt');
   tgt.style.left = pct(tb * 1.1) + '%'; tgt.style.width = (pct(tb * 0.9) - pct(tb * 1.1)) + '%';
   const peakM = toM(M.maxTheta || 0), pk = $('meterPeak'); pk.style.left = pct(peakM) + '%'; pk.hidden = !(peakM > 0.005);
-  const track = $('meterTrack'), flip = flipWithView && !!settings.mirror;
+  const track = $('meterTrack'), flip = flipWithView && (!!settings.mirror !== (settings.hand === 'L'));
   if (track.classList.contains('flip') !== flip) { track.classList.toggle('flip', flip); document.querySelector('.meter-labels').classList.toggle('flip', flip); }
   const ff = $('meterFace');
   if (M.state === 'settle') { ff.textContent = 'Hold still'; ff.classList.remove('ok'); return; }
