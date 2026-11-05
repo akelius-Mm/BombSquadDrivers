@@ -23,7 +23,7 @@ For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url
 
 1. Turn on Portrait Orientation Lock. Hold the phone upright in both hands like a club grip, long edge along the shaft, screen facing you. Either end can point up. If you prefer the screen toward the target, set **Screen faces** to Target in settings.
 2. Tap **Swing with phone**, set up at address and hold still. The game reads how you are holding the phone from gravity, squares a virtual driver to the target, and beeps.
-3. Swing. From your point of view you see the driver and your hands follow the phone, and a yellow trail traces the clubhead's path.
+3. Swing while watching the screen like a mirror: a golfer faces you and copies your hands, and a yellow line traces the clubhead's path. Each shot is called out loud (carry, left or right, shot shape), so you don't need to read the screen mid-swing. **View** in settings switches to **My eyes**, looking down at the ball; **Call out results** turns the voice off.
 4. After the ball lands, the trail stays on screen so you can check your path, and the next ball tees up on its own.
 
 **Safety:** use a wrist strap or a firm two-handed grip, and clear the room. Swing smooth. **Power assist** in settings scales a gentle indoor swing up to full-shot club speeds.
