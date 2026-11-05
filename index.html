@@ -114,6 +114,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
 .puttinfo b { font-size: 17px; font-weight: 700; }
 .puttinfo small { font: 500 11px var(--mono); color: var(--muted); }
 .result.putt .big { font-size: 40px; }
+.meter { pointer-events: none; width: min(420px, 100%); box-sizing: border-box; padding: 8px 12px 10px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.meter-labels { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+#meterFace { color: var(--chalk); text-transform: none; letter-spacing: 0; font-weight: 600; }
+#meterFace.ok { color: var(--good); }
+.track { position: relative; height: 26px; border-radius: 13px; background: rgba(0,0,0,.28); overflow: hidden; }
+.track.flip { transform: scaleX(-1); }
+.meter-labels.flip { flex-direction: row-reverse; }
+.ballmark { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; }
+.tgt { position: absolute; top: 3px; bottom: 3px; border-radius: 9px; background: rgba(255, 211, 107, .28); border: 2px solid var(--yardage); box-sizing: border-box; }
+.peak { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--chalk); opacity: .55; }
+.headmark { position: absolute; top: 2px; bottom: 2px; width: 6px; margin-left: -3px; border-radius: 3px; background: var(--flag); box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
 .result.putt.compact .big { font-size: 26px; }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--yardage); color: #2a1e00; font: 600 11px var(--mono); }
 .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
@@ -242,6 +253,10 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
 </section>
 
 <footer class="hud-bottom">
+  <div class="meter" id="meter" hidden>
+    <div class="meter-labels"><span>Back</span><span id="meterFace">Hold still</span><span>Through</span></div>
+    <div class="track" id="meterTrack"><div class="tgt" id="meterTgt"></div><div class="peak" id="meterPeak"></div><div class="ballmark"></div><div class="headmark" id="meterHead"></div></div>
+  </div>
   <div class="puttbar" id="puttBar" hidden>
     <button class="icon-btn" id="aimL" aria-label="Aim one inch left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="puttinfo"><b id="aimVal">Aim at the hole</b><small id="readTxt"></small></div>
@@ -277,7 +292,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
       <li>Tap <b>Swing with phone</b>, take your address and hold still. The game reads how you are holding the phone, squares the virtual driver to the target and beeps.</li>
       <li>Watch the golfer on screen facing you: their club follows your hands (tap the ⇄ button at the top to flip left and right), and a yellow line draws your clubhead path. Speed sets distance; face and path at impact set the start line and curve.</li>
       <li>You can't read the screen mid-swing, so each shot is called out loud. Look back at the screen for the full numbers.</li>
-      <li>Putting: tap Putting at the top. Hold the phone the same way, wait for the beep, then rock it back and through like a putter. Use the arrows to aim for break, and the chips to pick a distance or a drill.</li>
+      <li>Putting: tap Putting at the top. Hold the phone the same way, wait for the beep, then rock it back and through like a putter. Take the red marker on the stroke meter back to the yellow zone for the right pace. Use the arrows to aim for break, and the chips to pick a distance or a drill.</li>
       <li>The yellow trail stays on screen after the shot so you can check your path. The next ball tees up on its own.</li>
     </ol>
     <h3>Settings</h3>
@@ -1618,6 +1633,7 @@ function bindSeg(id, key, parse) {
     const b = e.target.closest('button'); if (!b) return;
     settings[key] = parse(b.dataset.v); saveSettings(); paint();
     if (key === 'wind') rollWind();
+    if (key === 'stimp' && game === 'putt' && !busy) aimPutt();
     if (key === 'screen' || key === 'flip' || key === 'hand') resetGrip();
     if (key === 'screen' && mode === 'motion' && !busy) armMotion();
     if (key === 'hand' && mode === 'motion') { buildClub(); calibrate(); SWG.trail = []; rebuildTrail(); if (!busy) armMotion(); }
@@ -1631,7 +1647,7 @@ bindSeg('viewSeg', 'view', v => v);
 bindSeg('voiceSeg', 'voice', v => +v);
 bindSeg('stimpSeg', 'stimp', v => +v);
 { const pa = $('puttAssist'); pa.value = settings.puttAssist; const paint = () => { $('puttAssistVal').textContent = (+settings.puttAssist).toFixed(2) + '×'; };
-  pa.addEventListener('input', () => { settings.puttAssist = +pa.value; saveSettings(); paint(); }); paint(); }
+  pa.addEventListener('input', () => { settings.puttAssist = +pa.value; saveSettings(); paint(); if (game === 'putt' && !busy) aimPutt(); }); paint(); }
 bindSeg('windSeg', 'wind', v => +v);
 const assist = $('assist'), shapeS = $('shapeSens');
 assist.value = settings.assist; shapeS.value = settings.shape;
@@ -1783,6 +1799,11 @@ function aimPutt() {
   const upTxt = Math.abs(along) < 0.3 ? 'flat' : `${along > 0 ? 'uphill' : 'downhill'} ${Math.abs(along).toFixed(1)}%`;
   const brTxt = Math.abs(across) < 0.3 ? 'straight' : `breaks ${across > 0 ? 'right to left' : 'left to right'} ${Math.abs(across).toFixed(1)}%`;
   $('readTxt').textContent = `${Math.round(dist / FT)} ft · ${upTxt} · ${brTxt}`;
+  // How far back to take the putter for this putt: ball speed to roll the distance (plus a little
+  // past), turned into putter speed, then into a pendulum backstroke at a typical 0.32 s downstroke.
+  const decel = 1.83 * 1.83 / (2 * settings.stimp * FT), aEff = Math.max(0.12, decel + 9.81 * 5 / 7 * along / 100);
+  const vBall = Math.sqrt(2 * aEff * (dist + 0.35)), vHead = vBall / (1.5 * settings.puttAssist);
+  PUTT.targetBack = clamp(2 * vHead * 0.32 / Math.PI, 0.03, 0.38);
   $('aimVal').textContent = PUTT.aimIn === 0 ? 'Aim at the hole' : `Aim ${Math.abs(PUTT.aimIn)} in ${PUTT.aimIn > 0 ? 'right' : 'left'}`;
 }
 function simulatePutt(v0, dirA) {
@@ -1890,22 +1911,22 @@ function puttMotion(w, mag, dt, now) {
       M.still = mag < 20 ? M.still + dt : 0;
       if (M.still > 0.6) {
         calibrate(); SWG.trail = []; rebuildTrail();
-        M.state = 'ready'; M.learnedPutt = false;
+        M.state = 'ready'; M.maxBack = 0;
         setTimeout(() => $('puttResult').classList.add('compact'), 1500);
         beep(880); toast('Putt'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (err) {}
         setStatus('live', 'Ready. Putt when you like');
       }
       break;
     case 'ready':
-      if (mag > 10) { M.state = 'pback'; M.backStart = now; M.back = [0, 0, 0]; M.committed = false; SWG.trail = [SWG.head.clone()]; }
+      if (mag > 10) { M.state = 'pback'; M.backStart = now; M.back = [0, 0, 0]; M.committed = false; M.maxBack = 0; SWG.trail = [SWG.head.clone()]; }
       break;
     case 'pback': {
       pushTrail();
+      M.maxBack = Math.max(M.maxBack || 0, SWG.head.z - BALL_AT.z);
       for (let i = 0; i < 3; i++) M.back[i] += w[i] * dt;
       const bl = Math.hypot(M.back[0], M.back[1], M.back[2]) || 1;
       const proj = (w[0] * M.back[0] + w[1] * M.back[1] + w[2] * M.back[2]) / bl;
       if (!M.committed && bl > 2.5) { M.committed = true; setStatus('live', 'Backstroke…'); }
-      if (!M.learnedPutt && bl > 8) { M.learnedPutt = true; learnPlane(); }
       if (proj < -5) {
         if (M.committed) { M.state = 'pdown'; M.top = now; M.peak = 0; SWG.prevSample = null; M.bestP = null; M.backDir = M.back.map(x => x / bl); }
         else M.state = 'ready'; // tiny wobble, not a stroke
@@ -1960,7 +1981,7 @@ function setGame(g) {
   ARM = g === 'putt' ? 0.5 : 0.62; LEVER = g === 'putt' ? 1.34 : 1.72;
   buildClub(); calibrate();
   SWG.trail = []; rebuildTrail();
-  $('clubs').hidden = g === 'putt'; $('puttChips').hidden = g !== 'putt'; $('puttBar').hidden = g !== 'putt';
+  $('clubs').hidden = g === 'putt'; $('puttChips').hidden = g !== 'putt'; $('puttBar').hidden = g !== 'putt'; $('meter').hidden = true;
   $('result').classList.add('dim'); $('puttResult').classList.add('dim');
   $('gameSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === g)));
   if (g === 'putt') setupPutt();
@@ -1973,18 +1994,41 @@ $('aimR').addEventListener('click', () => { if (busy) return; PUTT.aimIn += 1; a
 $('puttResult').addEventListener('click', () => { const el = $('puttResult'), on = !el.classList.contains('compact'); el.classList.toggle('compact', on); settings.cardCompact = on ? 1 : 0; saveSettings(); });
 PUTT.drill = settings.puttDrill || 'ladder'; PUTT.dist = settings.puttDist || 10;
 if (LOW) window.__putt = { PUTT, simulatePutt, setGame, setupPutt, greenGrad, get busy() { return busy; } };
+// Live stroke meter: putter position back/through, the target backstroke for this putt, and the face.
+const METER_HALF = 0.4; // metres from the ball to each end of the track
+function updateMeter(flipWithView) {
+  const show = game === 'putt' && mode === 'motion';
+  const el = $('meter'); if (el.hidden === show) el.hidden = !show;
+  if (!show) return;
+  const pct = (m) => 50 - clamp(m / METER_HALF, -1, 1) * 50; // backstroke (+) goes left
+  const back = SWG.head.z - BALL_AT.z;
+  $('meterHead').style.left = pct(back) + '%';
+  const tb = PUTT.targetBack || 0.1, tgt = $('meterTgt');
+  tgt.style.left = pct(tb * 1.1) + '%'; tgt.style.width = (pct(tb * 0.9) - pct(tb * 1.1)) + '%';
+  const pk = $('meterPeak'); pk.style.left = pct(M.maxBack || 0) + '%'; pk.hidden = !(M.maxBack > 0.005);
+  const track = $('meterTrack'), flip = flipWithView && !!settings.mirror;
+  if (track.classList.contains('flip') !== flip) { track.classList.toggle('flip', flip); document.querySelector('.meter-labels').classList.toggle('flip', flip); }
+  const ff = $('meterFace');
+  if (M.state === 'settle') { ff.textContent = 'Hold still'; ff.classList.remove('ok'); return; }
+  const f = faceAngle(), open = settings.hand === 'L' ? f < 0 : f > 0, sq = Math.abs(f) < 1;
+  ff.textContent = sq ? `Face square (${Math.abs(f).toFixed(1)}°)` : `Face ${Math.abs(f).toFixed(1)}° ${open ? 'open' : 'shut'}`;
+  ff.classList.toggle('ok', sq);
+}
 function puttFrame(dt, realDt) {
   if (PUTT.roll && !PUTT.roll.done) stepRoll(dt);
   else if (!PUTT.roll) { const l = ballLocal([PUTT.start.x, PUTT.start.y, 0]); ball.position.copy(putWorld.localToWorld(_pv.set(l[0], l[1], l[2]))); }
   aimSun(ball.position.x, ball.position.z);
   shadow.visible = false; ball.scale.setScalar(1); ball.castShadow = true;
-  const b = ball.position;
+  const b = ball.position, faceOn = settings.view === 'mirror' && mode === 'motion';
   if (PUTT.roll) { tmpPos.set(b.x * 0.7 + 0.6, 1.7, Math.min(3.3, b.z + 3.2)); tmpLook.set(b.x, 0, b.z - 1.4); }
+  else if (faceOn) { tmpPos.set(-RIG.s * 1.9, 0.62, -0.15); tmpLook.set(RIG.C.x * 0.3, 0.3, -0.05); } // face-on, close on the putter
   else { tmpPos.set(1.0, 1.55, 3.4); tmpLook.set(-0.15, 0, -2.6); } // behind the ball, a step to the side so the line is clear
+  updateMeter(faceOn && !PUTT.roll);
   const k = 1 - Math.exp(-realDt * 2.6);
   camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, k);
   clubGroup.visible = true; bodyGroup.visible = true;
-  if (canvas.classList.contains('mirror')) canvas.classList.remove('mirror');
+  const flipX = faceOn && !PUTT.roll && !!settings.mirror;
+  if (canvas.classList.contains('mirror') !== flipX) canvas.classList.toggle('mirror', flipX);
   tmpUp.set(0, 1, 0); camera.up.lerp(tmpUp, 1 - Math.exp(-realDt * 3)).normalize();
   const wantFov = camera.aspect < 1 ? 62 : 45;
   if (Math.abs(camera.fov - wantFov) > 0.05) { camera.fov += (wantFov - camera.fov) * (1 - Math.exp(-realDt * 3)); camera.updateProjectionMatrix(); }

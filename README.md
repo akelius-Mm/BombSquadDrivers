@@ -52,6 +52,7 @@ Tap **Putting** at the top left to move to a sloped practice green with four cup
 
 1. Hold the phone the same way as on the range, tap **Swing with phone**, and stay still until the beep and **PUTT** prompt.
 2. Rock the phone back and through like a putter. Any stroke after the beep counts, so settle before you start.
+   The view is face-on and close, like the range, and a **stroke meter** shows your putter moving back and through. Take the red marker back to the **yellow zone** for the right pace on this putt (it accounts for distance, slope, green speed and putt power). The meter also shows the face live and turns green when it's square.
 3. The ball rolls with real slope and green speed, drops if it reaches the cup at a catchable pace, and lips out if it's too firm. The result is called out loud.
 
 | Control | What it does |
