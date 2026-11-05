@@ -214,6 +214,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <div class="brand">Pocket Range<small>Bay 7 · Grass tee</small></div>
     <div class="spacer"></div>
     <div class="wind" id="wind" title="Wind"><svg viewBox="0 0 24 24" id="windArrow" aria-hidden="true"><path d="M12 3l5 8h-3.5v10h-3V11H7z" fill="currentColor"/></svg><span id="windText">calm</span></div>
+    <button class="icon-btn" id="camView" aria-label="Switch camera: facing me or first person"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></button>
     <button class="icon-btn" id="flipView" aria-label="Flip the view left to right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button class="icon-btn" id="openShots" aria-label="Session shots"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
     <button class="icon-btn" id="openSettings" aria-label="Settings and how to swing"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
@@ -303,7 +304,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <div class="row"><label>Handed</label><div class="seg" id="handSeg"><button data-v="R" aria-pressed="true">Right</button><button data-v="L" aria-pressed="false">Left</button></div></div>
     <div class="row"><label for="assist">Power assist</label><input type="range" id="assist" min="1" max="2.6" step="0.05" value="1.3"><span class="val" id="assistVal">1.30×</span></div>
     <div class="row"><label for="shapeSens">Shot-shape strength</label><input type="range" id="shapeSens" min="0" max="2" step="0.1" value="1"><span class="val" id="shapeVal">1.0×</span></div>
-    <div class="row"><label>View</label><div class="seg" id="viewSeg"><button data-v="mirror" aria-pressed="true">Facing me</button><button data-v="eyes" aria-pressed="false">My eyes</button></div></div>
+    <div class="row"><label>View</label><div class="seg" id="viewSeg"><button data-v="mirror" aria-pressed="true">Facing me</button><button data-v="eyes" aria-pressed="false">First person</button></div></div>
     <div class="row"><label>Call out results</label><div class="seg" id="voiceSeg"><button data-v="1" aria-pressed="true">On</button><button data-v="0" aria-pressed="false">Off</button></div></div>
     <div class="row"><label>Screen faces</label><div class="seg" id="screenSeg"><button data-v="me" aria-pressed="true">Me</button><button data-v="target" aria-pressed="false">Target</button></div></div>
     <div class="row"><label>Reverse club motion</label><div class="seg" id="flipSeg"><button data-v="0" aria-pressed="true">Off</button><button data-v="1" aria-pressed="false">On</button></div></div>
@@ -1547,7 +1548,7 @@ async function startMotion() {
   cancelDemo();
   mode = 'motion'; M.lastEvent = 0;
   buildClub(); calibrate();
-  if (LOW) window.__dbg = { SWG, M, get RIG() { return RIG; } };
+  if (LOW) window.__dbg = { SWG, M, get RIG() { return RIG; }, camera, ball, get flight() { return flight; }, camLook };
   $('motionBtn').textContent = 'Re-address';
   $('hint').textContent = 'Beep = ball teed up. Swing smooth. Next ball tees up on its own.';
   if (!busy) armMotion();
@@ -1698,6 +1699,11 @@ $('openSettings').addEventListener('click', () => openSheet('settingsSheet'));
 $('closeSettings').addEventListener('click', () => closeSheet('settingsSheet'));
 $('result').addEventListener('click', toggleResult);
 $('result').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleResult(); } });
+$('camView').addEventListener('click', () => {
+  settings.view = settings.view === 'eyes' ? 'mirror' : 'eyes'; saveSettings();
+  document.querySelectorAll('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.view)));
+  toast(settings.view === 'eyes' ? 'First person' : 'Facing me');
+});
 $('flipView').addEventListener('click', () => { settings.mirror = settings.mirror ? 0 : 1; saveSettings(); toast('View flipped'); });
 $('relearn').addEventListener('click', () => { resetGrip(); toast('Grip reset'); });
 $('openShots').addEventListener('click', () => { renderShots(); openSheet('shotsSheet'); });
@@ -2063,7 +2069,7 @@ PUTT.drill = settings.puttDrill || 'ladder'; PUTT.dist = settings.puttDist || 10
 if (LOW) window.__putt = { PUTT, simulatePutt, setGame, setupPutt, greenGrad, get busy() { return busy; }, reset() { busy = false; PUTT.roll = null; setupPutt(); armMotion(); } };
 // Live stroke meter: putter position back/through, the target backstroke for this putt, and the face.
 const METER_HALF = 0.4; // metres from the ball to each end of the track
-function updateMeter(flipWithView) {
+function updateMeter(viewKind) {
   const show = isPutting() && mode === 'motion';
   const el = $('meter'); if (el.hidden === show) el.hidden = !show;
   if (!show) return;
@@ -2074,7 +2080,8 @@ function updateMeter(flipWithView) {
   const tb = PUTT.targetBack || 0.1, tgt = $('meterTgt');
   tgt.style.left = pct(tb * 1.1) + '%'; tgt.style.width = (pct(tb * 0.9) - pct(tb * 1.1)) + '%';
   const peakM = toM(M.maxTheta || 0), pk = $('meterPeak'); pk.style.left = pct(peakM) + '%'; pk.hidden = !(peakM > 0.005);
-  const track = $('meterTrack'), flip = flipWithView && (!!settings.mirror !== (settings.hand === 'L'));
+  // Put "back" on the side of the screen the putter actually moves to in this view.
+  const track = $('meterTrack'), flip = viewKind === 'face' ? (!!settings.mirror !== (settings.hand === 'L')) : viewKind === 'eyes' ? settings.hand !== 'L' : false;
   if (track.classList.contains('flip') !== flip) { track.classList.toggle('flip', flip); document.querySelector('.meter-labels').classList.toggle('flip', flip); }
   const ff = $('meterFace');
   if (M.state === 'settle') { ff.textContent = 'Hold still'; ff.classList.remove('ok'); return; }
@@ -2087,18 +2094,22 @@ function puttFrame(dt, realDt) {
   else if (!PUTT.roll) { const l = ballLocal([PUTT.start.x, PUTT.start.y, 0]); ball.position.copy(putWorld.localToWorld(_pv.set(l[0], l[1], l[2]))); }
   aimSun(ball.position.x, ball.position.z);
   shadow.visible = false; ball.scale.setScalar(1); ball.castShadow = true;
-  const b = ball.position, faceOn = settings.view === 'mirror' && mode === 'motion';
-  if (PUTT.roll) { tmpPos.set(b.x * 0.7 + 0.6, 1.7, Math.min(3.3, b.z + 3.2)); tmpLook.set(b.x, 0, b.z - 1.4); }
+  const b = ball.position, faceOn = settings.view === 'mirror' && mode === 'motion', eyes = settings.view === 'eyes' && mode === 'motion';
+  if (eyes) { // first person: eyes over the ball, then turn your head to watch it roll
+    tmpPos.set(RIG.C.x * 0.3, 1.55, 0.04);
+    if (PUTT.roll) tmpLook.copy(b); else tmpLook.set(-RIG.s * 0.04, 0, -0.3);
+  } else if (PUTT.roll) { tmpPos.set(b.x * 0.7 + 0.6, 1.7, Math.min(3.3, b.z + 3.2)); tmpLook.set(b.x, 0, b.z - 1.4); }
   else if (faceOn) { tmpPos.set(-RIG.s * 1.9, 0.62, -0.15); tmpLook.set(RIG.C.x * 0.3, 0.3, -0.05); } // face-on, close on the putter
   else { tmpPos.set(1.0, 1.55, 3.4); tmpLook.set(-0.15, 0, -2.6); } // behind the ball, a step to the side so the line is clear
-  updateMeter(faceOn && !PUTT.roll);
+  updateMeter(PUTT.roll ? '' : faceOn ? 'face' : eyes ? 'eyes' : '');
   const k = 1 - Math.exp(-realDt * 2.6);
   camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, k);
   clubGroup.visible = true; bodyGroup.visible = true;
   const flipX = faceOn && !PUTT.roll && !!settings.mirror;
   if (canvas.classList.contains('mirror') !== flipX) canvas.classList.toggle('mirror', flipX);
-  tmpUp.set(0, 1, 0); camera.up.lerp(tmpUp, 1 - Math.exp(-realDt * 3)).normalize();
-  const wantFov = camera.aspect < 1 ? 62 : 45;
+  if (eyes && !PUTT.roll) tmpUp.set(-RIG.s, 0.25, 0).normalize(); else tmpUp.set(0, 1, 0); // head down: target to your side
+  camera.up.lerp(tmpUp, 1 - Math.exp(-realDt * 3)).normalize();
+  const wantFov = eyes && !PUTT.roll ? (camera.aspect < 1 ? 80 : 60) : camera.aspect < 1 ? 62 : 45;
   if (Math.abs(camera.fov - wantFov) > 0.05) { camera.fov += (wantFov - camera.fov) * (1 - Math.exp(-realDt * 3)); camera.updateProjectionMatrix(); }
 }
 
@@ -2431,19 +2442,25 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 function rangeFrame(dt, realDt) {
-  if (flight) stepFlight(dt);
-  if (flight && game === 'course') { // lift the ball onto the raised green when it gets there
-    const p = shotToHole(ball.position.x, ball.position.z), h = HOLES[COURSE.hole], gx = p.x - h.green.x, gz = p.y - h.green.y;
-    if (Math.hypot(gx, gz) < greenR(Math.atan2(gz, gx)) + COLLAR) ball.position.y += surfaceY(gx, gz);
-  }
-  else ball.position.set(0, 0.0214 + 0.037, 0);
+  if (flight) {
+    stepFlight(dt);
+    if (game === 'course') { // lift the ball onto the raised green when it gets there
+      const p = shotToHole(ball.position.x, ball.position.z), h = HOLES[COURSE.hole], gx = p.x - h.green.x, gz = p.y - h.green.y;
+      if (Math.hypot(gx, gz) < greenR(Math.atan2(gz, gx)) + COLLAR) ball.position.y += surfaceY(gx, gz);
+    }
+  } else ball.position.set(0, 0.0214 + 0.037, 0);
   // Real sun shadows follow the action; a soft blob stands in while the ball is enlarged in flight.
   if (flight) aimSun(ball.position.x, ball.position.z); else aimSun(0, 0.3);
   shadow.position.set(ball.position.x, 0.03, ball.position.z);
   shadow.material.opacity = Math.max(0, 1 - ball.position.y / 30);
 
   // Camera: sit at address; chase the ball in flight; settle on the landing area.
-  if (flight) {
+  const fpv = mode === 'motion' && settings.view === 'eyes';
+  if (flight && fpv) {
+    // First person: lift your head after impact and watch the ball from where you stand.
+    tmpPos.set(RIG.C.x * 0.85, 1.72, 0.15);
+    camera.position.lerp(tmpPos, 1 - Math.exp(-realDt * 3)); camLook.lerp(ball.position, 1 - Math.exp(-realDt * 9));
+  } else if (flight) {
     const b = ball.position;
     const dist = -b.z;
     tmpPos.set(b.x * 0.5, Math.max(2.1, b.y * 0.5 + 3 + dist * 0.07), Math.min(ADDRESS_POS.z, b.z + 20 + dist * 0.16));
@@ -2456,12 +2473,9 @@ function rangeFrame(dt, realDt) {
     tmpPos.set(-RIG.s * 4.3, 1.35, -0.35); tmpLook.set(RIG.C.x * 0.55, 1.05, -0.1);
     camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, k);
   } else if (mode === 'motion') {
-    // At address: the golfer's eyes looking down at the ball. During the swing: pull back above
-    // the golfer's head so the whole arc stays on screen.
-    const swinging = (M.state === 'back' && M.committed) || M.state === 'down';
-    const k = 1 - Math.exp(-realDt * (swinging ? 5 : 2.2));
-    if (swinging) { tmpPos.set(RIG.C.x * 1.3, 6.4, 0.35); tmpLook.set(-RIG.s * 0.15, 0.4, 0.2); }
-    else { tmpPos.set(RIG.C.x * 0.72, 1.78, 0); tmpLook.set(-RIG.s * 0.12, 0, 0); }
+    // First person: your eyes, head down on the ball, for the whole swing.
+    const k = 1 - Math.exp(-realDt * 2.2);
+    tmpPos.set(RIG.C.x * 0.72, 1.78, 0); tmpLook.set(-RIG.s * 0.12, 0, 0);
     camera.position.lerp(tmpPos, k); camLook.lerp(tmpLook, k);
   } else {
     const k = 1 - Math.exp(-realDt * 2.2);

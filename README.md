@@ -23,6 +23,10 @@ For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url
 
 Tap **Lefty** at the top left (next to Range / Putting). The golfer, club, putter, ball basket and stroke meter all mirror, and shot names follow your hand (a ball curving right is a draw for a left-hander). The setting is remembered and also lives in settings as **Handed**.
 
+## Camera
+
+Tap the **eye** button at the top to switch between **Facing me** (a golfer faces you and copies your hands) and **First person** (your own eyes: head down on the ball through the swing, then you look up and watch the ball fly; on the green you watch the putt roll). The **⇄** button flips the facing view left to right.
+
 ## How to swing
 
 1. Turn on Portrait Orientation Lock. Hold the phone upright in both hands like a club grip, long edge along the shaft, screen facing you. Either end can point up. If you prefer the screen toward the target, set **Screen faces** to Target in settings.
