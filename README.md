@@ -50,6 +50,17 @@ Your first backswing teaches the game how you hold the phone: it checks which wa
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
 
+## Course
+
+Tap **Course** at the top left to play **Pocket Pines**, an original 9-hole, par-36 course: doglegs, fairway and greenside bunkers, ponds, a creek across a par 5, and tree lines that mark out of bounds.
+
+- Every shot is played from where the last one stopped. The club is picked for you from the distance to the pin; tap another club to change it. **Chip** is a short-game club for shots around the green.
+- The **‹ ›** arrows aim 2° left or right, for doglegs or to play away from trouble. The hole map on the right shows the fairway, hazards, green, pin, your ball and the aim line.
+- Lies matter: shots from the rough lose about 12% and from sand about 28%, rough grabs the roll, and a ball rolling into a bunker stays there.
+- Water: one penalty stroke and a drop short of the hazard. Out of bounds: stroke and distance.
+- On the green it switches to putting automatically. Hole out for the score ("Birdie!", "Par", "Bogey"), then the next tee.
+- The scorecard is in the chart panel, with **New round**. Your round is saved if you close the page. Holes are picked up at par + 5.
+
 ## Putting
 
 Tap **Putting** at the top left to move to a sloped practice green with four cups.
