@@ -46,6 +46,27 @@ Your first backswing teaches the game how you hold the phone: it checks which wa
 Ball flight uses drag and Magnus lift with spin decay, then bounce and roll.
 A tour-speed driver (167 mph ball speed, 11° launch, 2,700 rpm) carries about 270 yards.
 
+## Putting
+
+Tap **Putting** at the top left to move to a sloped practice green with four cups.
+
+1. Hold the phone the same way as on the range, tap **Swing with phone**, and stay still until the beep and **PUTT** prompt.
+2. Rock the phone back and through like a putter. Any stroke after the beep counts, so settle before you start.
+3. The ball rolls with real slope and green speed, drops if it reaches the cup at a catchable pace, and lips out if it's too firm. The result is called out loud.
+
+| Control | What it does |
+| --- | --- |
+| Distance chips | 3, 6, 10, 20 or 30 ft from a random spot around a cup |
+| 3–12 ladder | 3, 6, 9 and 12 ft in a loop |
+| Mix | A random cup and distance (4–34 ft) every putt |
+| ‹ › arrows | Aim 1 inch left or right of the cup to play the break |
+| Read line | Distance, uphill or downhill %, and which way it breaks, measured halfway to the hole |
+| Putt power (settings) | Scales your stroke speed if putts come up short or run long |
+| Green speed (settings) | Slow, medium or fast greens (stimp 8, 10 or 12) |
+
+The putt card shows the miss (short, long, left, right), start line, putter and ball speed, tempo (about 2:1 is typical) and your makes from that distance. **Session** keeps make percentage and average miss by distance.
+Swipe works for putting too: drag down and flick up gently.
+
 ## Graphics
 
 The range is rendered with three.js r160: a physically based sky with drifting clouds, a sun that casts real shadows on the mat and club, sky reflections on the clubhead and ball, ACES filmic tone mapping, 150,000 swaying grass blades around the tee, mowed stripes, domed greens with bunkers and waving flags, layered tree lines and hills in the haze.
