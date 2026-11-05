@@ -86,12 +86,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
   transition: opacity .35s, transform .35s; cursor: pointer;
 }
 .result.dim { opacity: 0; transform: translate(-50%, -8px); pointer-events: none; }
-.result-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.result-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; position: relative; }
+.chev { position: absolute; right: -8px; top: -6px; width: 22px; height: 22px; color: var(--muted); transition: transform .25s; }
+.result.compact { padding: 8px 12px; }
+.result.compact .grid, .result.compact .viz { display: none; }
+.result.compact .result-head { align-items: center; flex-wrap: nowrap; padding-right: 24px; }
+.result.compact .big { white-space: nowrap; }
+.result.compact .big { font-size: 30px; }
+.result.compact .big small { font-size: 13px; }
+.result.compact .head-meta { flex-direction: row; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.result.compact .chev { transform: rotate(180deg); top: 50%; right: -4px; margin-top: -11px; }
 .big { font-size: 54px; font-weight: 800; line-height: .9; font-variant-numeric: tabular-nums; }
 .big small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 2px; }
 .head-meta { display: flex; flex-direction: column; gap: 2px; font: 500 12px var(--mono); color: var(--muted); }
 .head-meta strong { color: var(--chalk); font-weight: 600; }
-.viz { width: 78px; height: 78px; flex: 0 0 auto; margin-left: auto; }
+.viz { width: 64px; height: 64px; flex: 0 0 auto; margin-left: auto; margin-right: 14px; }
 .viz .tl { stroke: var(--muted); stroke-dasharray: 3 4; stroke-width: 1.2; }
 .viz .pa { stroke: var(--yardage); stroke-width: 3; stroke-linecap: round; fill: none; }
 .viz .fa { stroke: var(--flag); stroke-width: 4; stroke-linecap: round; }
@@ -189,7 +198,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
   <nav class="clubs" id="clubs" aria-label="Club"></nav>
 </header>
 
-<section class="result dim" id="result" aria-live="polite">
+<section class="result dim" id="result" aria-live="polite" role="button" tabindex="0" aria-expanded="true" aria-label="Last shot. Tap to collapse or expand">
   <div class="result-head">
     <div class="big" id="rCarry">0<small>yd carry</small></div>
     <div class="head-meta">
@@ -204,6 +213,7 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
       <line class="fa" id="vizFace" x1="-13" y1="0" x2="13" y2="0"/>
       <circle cx="0" cy="-4" r="3.2" fill="#ffffff"/>
     </svg>
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
   <div class="grid">
     <div class="stat"><label>Club spd</label><output id="rClub">0<small>mph</small></output></div>
@@ -953,9 +963,11 @@ function drawViz(face, path) {
   const fl = $('vizFace'); fl.setAttribute('x1', (-fx).toFixed(1)); fl.setAttribute('y1', (4 - fy).toFixed(1)); fl.setAttribute('x2', fx.toFixed(1)); fl.setAttribute('y2', (4 + fy).toFixed(1));
 }
 let resultShownAt = 0, resultTimer = 0;
-function hideResult() { clearTimeout(resultTimer); $('result').classList.add('dim'); }
-// Used when the next ball tees up: leave the card up long enough to read, then clear the view.
+function setCompact(on) { const el = $('result'); el.classList.toggle('compact', on); el.setAttribute('aria-expanded', String(!on)); }
+// The next ball or a new swing shrinks the card to one line, so the last shot stays in view without covering the golfer.
+function hideResult() { clearTimeout(resultTimer); setCompact(true); }
 function hideResultSoon() { clearTimeout(resultTimer); resultTimer = setTimeout(hideResult, Math.max(0, 4000 - (performance.now() - resultShownAt))); }
+function toggleResult() { clearTimeout(resultTimer); const on = !$('result').classList.contains('compact'); setCompact(on); settings.cardCompact = on ? 1 : 0; saveSettings(); }
 function showResult(shot) {
   const s = shot.sim, r = (x) => Math.round(x);
   $('rCarry').innerHTML = `${r(s.carryYd)}<small>yd carry</small>`;
@@ -977,6 +989,7 @@ function showResult(shot) {
   $('rFace').innerHTML = `${Math.abs(f).toFixed(1)}<small>° ${Math.abs(f) < 0.5 ? '' : open ? 'open' : 'shut'}</small>`;
   $('rTempo').textContent = shot.tempo ? `${shot.tempo.toFixed(1)}:1` : '–';
   clearTimeout(resultTimer); resultShownAt = performance.now();
+  setCompact(!!settings.cardCompact);
   $('result').classList.remove('dim');
   const best = Math.max(0, ...shots.filter(x => x.club === shot.club).slice(0, -1).map(x => x.total));
   if (s.totalYd > best && shots.filter(x => x.club === shot.club).length > 2) toast('Session best');
@@ -1569,7 +1582,8 @@ const openSheet = (id) => { $(id).hidden = false; };
 const closeSheet = (id) => { $(id).hidden = true; };
 $('openSettings').addEventListener('click', () => openSheet('settingsSheet'));
 $('closeSettings').addEventListener('click', () => closeSheet('settingsSheet'));
-$('result').addEventListener('click', hideResult);
+$('result').addEventListener('click', toggleResult);
+$('result').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleResult(); } });
 $('flipView').addEventListener('click', () => { settings.mirror = settings.mirror ? 0 : 1; saveSettings(); toast('View flipped'); });
 $('relearn').addEventListener('click', () => { resetGrip(); toast('Grip reset'); });
 $('openShots').addEventListener('click', () => { renderShots(); openSheet('shotsSheet'); });
