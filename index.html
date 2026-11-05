@@ -1904,49 +1904,63 @@ function onPuttDone() {
     if (mode === 'motion') armMotion(); else setStatus('', 'Drag down, then flick up to putt');
   }, 2800);
 }
-// Putting stroke detector: after the beep, any rock back and through is a stroke. Small and slow is fine.
+// Putting stroke reader. Deliberately simple and independent of how the phone is held: after the beep,
+// it follows the rocking angle along whatever axis the backstroke uses. Impact is the moment that angle
+// swings back through the start; the angular speed there sets the pace.
+const PUTT_LEVER = 1.34; // shoulders to putter head (m): turns the phone's rocking speed into head speed
+function finishPuttStroke(omegaDeg, now) {
+  const headSpeed = Math.abs(omegaDeg) * Math.PI / 180 * PUTT_LEVER;
+  const face = clamp(faceAngle() * 0.5 * settings.shape, -5, 5); // forgiving: the face only nudges the line
+  const tempo = clamp((M.top - M.backStart) / Math.max(30, now - M.top), 0.3, 9);
+  finishPutt({ face, path: 0, headSpeed, ballSpeed: headSpeed * 1.5 * settings.puttAssist, tempo });
+}
 function puttMotion(w, mag, dt, now) {
   switch (M.state) {
     case 'settle':
-      M.still = mag < 20 ? M.still + dt : 0;
-      if (M.still > 0.6) {
+      M.still = mag < 25 ? M.still + dt : 0;
+      if (M.still > 0.45) {
         calibrate(); SWG.trail = []; rebuildTrail();
-        M.state = 'ready'; M.maxBack = 0;
+        M.state = 'ready'; M.theta = 0; M.maxTheta = 0;
         setTimeout(() => $('puttResult').classList.add('compact'), 1500);
         beep(880); toast('Putt'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (err) {}
-        setStatus('live', 'Ready. Putt when you like');
+        setStatus('live', 'Ready. Putt now');
       }
       break;
     case 'ready':
-      if (mag > 10) { M.state = 'pback'; M.backStart = now; M.back = [0, 0, 0]; M.committed = false; M.maxBack = 0; SWG.trail = [SWG.head.clone()]; }
+      if (mag > 8) {
+        M.state = 'pstroke'; M.phase = 'back'; M.backStart = now; M.axis = null; M.acc = [0, 0, 0];
+        M.theta = 0; M.prevTheta = 0; M.maxTheta = 0; M.fwdPeak = 0; M.prevOm = 0;
+        SWG.trail = [SWG.head.clone()];
+      }
       break;
-    case 'pback': {
+    case 'pstroke': {
       pushTrail();
-      M.maxBack = Math.max(M.maxBack || 0, SWG.head.z - BALL_AT.z);
-      for (let i = 0; i < 3; i++) M.back[i] += w[i] * dt;
-      const bl = Math.hypot(M.back[0], M.back[1], M.back[2]) || 1;
-      const proj = (w[0] * M.back[0] + w[1] * M.back[1] + w[2] * M.back[2]) / bl;
-      if (!M.committed && bl > 2.5) { M.committed = true; setStatus('live', 'Backstroke…'); }
-      if (proj < -5) {
-        if (M.committed) { M.state = 'pdown'; M.top = now; M.peak = 0; SWG.prevSample = null; M.bestP = null; M.backDir = M.back.map(x => x / bl); }
-        else M.state = 'ready'; // tiny wobble, not a stroke
-      } else if (now - M.backStart > 3500) armMotion();
-      break;
-    }
-    case 'pdown': {
-      pushTrail();
-      const s = -(w[0] * M.backDir[0] + w[1] * M.backDir[1] + w[2] * M.backDir[2]);
-      const vx = SWG.head.x - SWG.prevHead.x, vy = SWG.head.y - SWG.prevHead.y, vz = SWG.head.z - SWG.prevHead.z;
-      const speed = Math.hypot(vx, vy, vz) / Math.max(0.004, dt);
-      const path = Math.hypot(vx, vz) > 1e-5 ? clamp(Math.atan2(vx, -vz) * 180 / Math.PI, -30, 30) : 0;
-      const face = faceAngle(), z = SWG.head.z - BALL_AT.z, prev = SWG.prevSample;
-      if (s > M.peak) { M.peak = s; M.bestP = { face, path, speed }; }
-      const tempo = clamp((M.top - M.backStart) / Math.max(30, now - M.top), 0.3, 9);
-      const go = (f, p, sp) => finishPutt({ face: clamp(f * settings.shape, -12, 12), path: clamp(p * settings.shape, -20, 20), headSpeed: sp, ballSpeed: sp * 1.5 * settings.puttAssist, tempo });
-      if (prev && prev.z > 0 && z <= 0) { const f = prev.z / (prev.z - z); go(prev.face + (face - prev.face) * f, path, speed); break; }
-      SWG.prevSample = { z, face };
-      if (M.bestP && M.peak > 6 && s < M.peak * 0.25) { go(M.bestP.face, M.bestP.path, M.bestP.speed); break; } // stroke ended without reaching the ball in the model
-      if (now - M.top > 1800) { setStatus('warn', 'Stroke not read. Hold still to reset'); armMotion(); }
+      if (!M.axis) { // the first couple of degrees of movement define the stroke direction
+        for (let i = 0; i < 3; i++) M.acc[i] += w[i] * dt;
+        const l = Math.hypot(M.acc[0], M.acc[1], M.acc[2]);
+        if (l < 1.2) { if (now - M.backStart > 1500) M.state = 'ready'; break; }
+        M.axis = M.acc.map(x => x / l); M.theta = l;
+        setStatus('live', 'Stroke…');
+      }
+      const om = w[0] * M.axis[0] + w[1] * M.axis[1] + w[2] * M.axis[2]; // + = backstroke direction, deg/s
+      M.prevTheta = M.theta; M.theta += om * dt;
+      if (M.phase === 'back') {
+        M.maxTheta = Math.max(M.maxTheta, M.theta);
+        if (om < -3 && M.theta < M.maxTheta - 0.3) {
+          if (M.maxTheta < 1.0) { M.state = 'ready'; M.theta = 0; break; } // a tiny wobble, not a stroke
+          M.phase = 'fwd'; M.top = now;
+        } else if (now - M.backStart > 4000) { armMotion(); }
+      } else {
+        const fwd = -om;
+        M.fwdPeak = Math.max(M.fwdPeak, fwd);
+        if (M.prevTheta > 0 && M.theta <= 0) { // back through the start: impact
+          const f = M.prevTheta / (M.prevTheta - M.theta);
+          finishPuttStroke(M.prevOm + (om - M.prevOm) * f, now); break;
+        }
+        if (M.fwdPeak > 5 && fwd < M.fwdPeak * 0.3) { finishPuttStroke(M.fwdPeak * 0.85, now); break; } // stopped short of the start
+        if (now - M.top > 2500) { setStatus('warn', 'Stroke not read. Hold still to reset'); armMotion(); }
+      }
+      M.prevOm = om;
       break;
     }
   }
@@ -1993,7 +2007,7 @@ $('aimL').addEventListener('click', () => { if (busy) return; PUTT.aimIn -= 1; a
 $('aimR').addEventListener('click', () => { if (busy) return; PUTT.aimIn += 1; aimPutt(); });
 $('puttResult').addEventListener('click', () => { const el = $('puttResult'), on = !el.classList.contains('compact'); el.classList.toggle('compact', on); settings.cardCompact = on ? 1 : 0; saveSettings(); });
 PUTT.drill = settings.puttDrill || 'ladder'; PUTT.dist = settings.puttDist || 10;
-if (LOW) window.__putt = { PUTT, simulatePutt, setGame, setupPutt, greenGrad, get busy() { return busy; } };
+if (LOW) window.__putt = { PUTT, simulatePutt, setGame, setupPutt, greenGrad, get busy() { return busy; }, reset() { busy = false; PUTT.roll = null; setupPutt(); armMotion(); } };
 // Live stroke meter: putter position back/through, the target backstroke for this putt, and the face.
 const METER_HALF = 0.4; // metres from the ball to each end of the track
 function updateMeter(flipWithView) {
@@ -2001,11 +2015,12 @@ function updateMeter(flipWithView) {
   const el = $('meter'); if (el.hidden === show) el.hidden = !show;
   if (!show) return;
   const pct = (m) => 50 - clamp(m / METER_HALF, -1, 1) * 50; // backstroke (+) goes left
-  const back = SWG.head.z - BALL_AT.z;
+  const toM = (deg) => deg * Math.PI / 180 * PUTT_LEVER; // rocking angle → putter-head distance
+  const back = M.state === 'pstroke' ? toM(M.theta || 0) : 0;
   $('meterHead').style.left = pct(back) + '%';
   const tb = PUTT.targetBack || 0.1, tgt = $('meterTgt');
   tgt.style.left = pct(tb * 1.1) + '%'; tgt.style.width = (pct(tb * 0.9) - pct(tb * 1.1)) + '%';
-  const pk = $('meterPeak'); pk.style.left = pct(M.maxBack || 0) + '%'; pk.hidden = !(M.maxBack > 0.005);
+  const peakM = toM(M.maxTheta || 0), pk = $('meterPeak'); pk.style.left = pct(peakM) + '%'; pk.hidden = !(peakM > 0.005);
   const track = $('meterTrack'), flip = flipWithView && !!settings.mirror;
   if (track.classList.contains('flip') !== flip) { track.classList.toggle('flip', flip); document.querySelector('.meter-labels').classList.toggle('flip', flip); }
   const ff = $('meterFace');
