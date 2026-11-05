@@ -21,7 +21,7 @@ For local testing, `npx serve .` plus a tunnel such as `cloudflared tunnel --url
 
 ## Left-handed?
 
-Tap **Lefty** at the top left (next to Range / Putting). The golfer, club, putter, ball basket and stroke meter all mirror, and shot names follow your hand (a ball curving right is a draw for a left-hander). The setting is remembered and also lives in settings as **Handed**.
+Tap **Righty ⇄** at the top (next to Range / Putt / Course) to switch to Lefty. The golfer, club, putter, ball basket and stroke meter all mirror, and shot names follow your hand (a ball curving right is a draw for a left-hander). The setting is remembered and also lives in settings as **Handed**.
 
 ## Camera
 

@@ -53,7 +53,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
 }
 .bar { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
 .brand { font-weight: 800; font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
-.brand small { display: block; font: 500 10px/1.3 var(--mono); letter-spacing: 0.12em; color: var(--muted); }
+.brand small { display: none; font: 500 10px/1.3 var(--mono); letter-spacing: 0.12em; color: var(--muted); }
 .spacer { flex: 1; }
 .wind {
   display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px;
@@ -69,17 +69,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
 .clubs { display: flex; gap: 6px; overflow-x: auto; pointer-events: auto; scrollbar-width: none; padding-bottom: 2px; }
 .clubs::-webkit-scrollbar { display: none; }
 .club {
-  flex: 0 0 auto; min-width: 56px; padding: 6px 10px 5px; border-radius: 10px;
+  flex: 0 0 auto; min-width: 48px; padding: 5px 8px 4px; border-radius: 10px;
   background: var(--panel); border: 1px solid var(--line); text-align: center;
 }
-.club b { display: block; font-size: 18px; font-weight: 700; line-height: 1; }
-.club span { font: 500 10px var(--mono); color: var(--muted); }
+.club b { display: block; font-size: 16px; font-weight: 700; line-height: 1; }
+.club span { font: 500 9px var(--mono); color: var(--muted); }
 .club[aria-pressed="true"] { background: var(--flag); border-color: var(--flag); color: var(--flag-ink); }
 .club[aria-pressed="true"] span { color: var(--flag-ink); opacity: .85; }
 
 .result {
   position: fixed; z-index: 4; left: 50%; transform: translate(-50%, 0);
-  top: calc(env(safe-area-inset-top, 0px) + 128px);
+  top: var(--cards-top, calc(env(safe-area-inset-top, 0px) + 128px));
   width: min(420px, calc(100% - 32px)); box-sizing: border-box;
   background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
   padding: 12px 14px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -108,8 +108,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
 #minimap { position: fixed; z-index: 3; right: max(12px, env(safe-area-inset-right, 0px)); top: 44%; width: 78px; height: 150px; border-radius: 12px; background: rgba(28, 58, 34, 0.82); border: 1px solid var(--line); pointer-events: none; }
 .row2 { display: flex; gap: 8px; align-items: stretch; pointer-events: auto; }
 .row2 .clubs { flex: 1 1 auto; min-width: 0; }
-.gameseg { background: var(--panel); flex: 0 0 auto; flex-direction: column; border-radius: 10px; }
-.gameseg button { padding: 5px 10px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; flex: 1; }
+.modebar { display: flex; gap: 6px; pointer-events: auto; flex-wrap: wrap; }
+.gameseg { background: var(--panel); flex: 0 0 auto; border-radius: 10px; }
+.gameseg button { padding: 6px 9px; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; line-height: 1.1; }
 .puttbar { display: flex; align-items: center; gap: 10px; pointer-events: auto; width: min(420px, 100%); box-sizing: border-box; padding: 6px 8px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
 .puttinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
 .puttinfo b { font-size: 17px; font-weight: 700; }
@@ -219,9 +220,11 @@ th { color: var(--muted); font-weight: 500; font-size: 10px; letter-spacing: .08
     <button class="icon-btn" id="openShots" aria-label="Session shots"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
     <button class="icon-btn" id="openSettings" aria-label="Settings and how to swing"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
+  <div class="modebar">
+    <div class="seg gameseg" id="gameSeg" role="group" aria-label="Mode"><button data-v="range" aria-pressed="true">Range</button><button data-v="putt" aria-pressed="false">Putt</button><button data-v="course" aria-pressed="false">Course</button></div>
+    <div class="seg gameseg"><button id="handQuick" aria-label="Golfer hand. Tap to switch">Righty ⇄</button></div>
+  </div>
   <div class="row2">
-    <div class="seg gameseg" id="handQuick" role="group" aria-label="Golfer"><button data-v="R" aria-pressed="true">Righty</button><button data-v="L" aria-pressed="false">Lefty</button></div>
-    <div class="seg gameseg" id="gameSeg" role="group" aria-label="Mode"><button data-v="range" aria-pressed="true">Range</button><button data-v="putt" aria-pressed="false">Putting</button><button data-v="course" aria-pressed="false">Course</button></div>
     <nav class="clubs" id="clubs" aria-label="Club"></nav>
     <nav class="clubs" id="puttChips" aria-label="Putt distance or drill" hidden></nav>
   </div>
@@ -1668,16 +1671,16 @@ bindSeg('handSeg', 'hand', v => v);
 function applyHand() {
   basketGroup.scale.x = settings.hand === 'L' ? -1 : 1;
   buildClub(); calibrate(); SWG.trail = []; rebuildTrail();
-  document.querySelectorAll('#handSeg button, #handQuick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.hand)));
+  document.querySelectorAll('#handSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.hand)));
+  $('handQuick').textContent = settings.hand === 'L' ? 'Lefty ⇄' : 'Righty ⇄';
   if (mode === 'motion' && !busy) armMotion();
 }
-$('handQuick').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b || b.dataset.v === settings.hand) return;
-  settings.hand = b.dataset.v; saveSettings(); resetGrip(); applyHand();
+$('handQuick').addEventListener('click', () => {
+  settings.hand = settings.hand === 'L' ? 'R' : 'L'; saveSettings(); resetGrip(); applyHand();
   toast(settings.hand === 'L' ? 'Left-handed' : 'Right-handed');
 });
 basketGroup.scale.x = settings.hand === 'L' ? -1 : 1;
-document.querySelectorAll('#handQuick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === settings.hand)));
+$('handQuick').textContent = settings.hand === 'L' ? 'Lefty ⇄' : 'Righty ⇄';
 bindSeg('flipSeg', 'flip', v => +v);
 bindSeg('screenSeg', 'screen', v => v);
 bindSeg('viewSeg', 'view', v => v);
@@ -2501,6 +2504,13 @@ function rangeFrame(dt, realDt) {
   shadow.scale.setScalar(s);
 }
 
+// Keep the shot cards just below the top controls, however tall they wrap.
+function placeCards() {
+  const b = document.querySelector('.hud-top').getBoundingClientRect().bottom;
+  document.documentElement.style.setProperty('--cards-top', Math.round(b + 8) + 'px');
+}
+window.addEventListener('resize', () => requestAnimationFrame(placeCards));
+new ResizeObserver(placeCards).observe(document.querySelector('.hud-top'));
 window.addEventListener('resize', resize);
 resize(); renderClubs(); rollWind();
 renderPuttChips();
