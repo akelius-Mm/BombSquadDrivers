@@ -83,7 +83,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--yardage); o
   width: min(420px, calc(100% - 32px)); box-sizing: border-box;
   background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
   padding: 12px 14px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  transition: opacity .35s, transform .35s; pointer-events: none;
+  transition: opacity .35s, transform .35s; cursor: pointer;
 }
 .result.dim { opacity: 0; transform: translate(-50%, -8px); pointer-events: none; }
 .result-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -952,6 +952,10 @@ function drawViz(face, path) {
   const fx = Math.cos(F) * 13, fy = Math.sin(F) * 13;
   const fl = $('vizFace'); fl.setAttribute('x1', (-fx).toFixed(1)); fl.setAttribute('y1', (4 - fy).toFixed(1)); fl.setAttribute('x2', fx.toFixed(1)); fl.setAttribute('y2', (4 + fy).toFixed(1));
 }
+let resultShownAt = 0, resultTimer = 0;
+function hideResult() { clearTimeout(resultTimer); $('result').classList.add('dim'); }
+// Used when the next ball tees up: leave the card up long enough to read, then clear the view.
+function hideResultSoon() { clearTimeout(resultTimer); resultTimer = setTimeout(hideResult, Math.max(0, 4000 - (performance.now() - resultShownAt))); }
 function showResult(shot) {
   const s = shot.sim, r = (x) => Math.round(x);
   $('rCarry').innerHTML = `${r(s.carryYd)}<small>yd carry</small>`;
@@ -972,6 +976,7 @@ function showResult(shot) {
   const open = lefty ? f < 0 : f > 0;
   $('rFace').innerHTML = `${Math.abs(f).toFixed(1)}<small>° ${Math.abs(f) < 0.5 ? '' : open ? 'open' : 'shut'}</small>`;
   $('rTempo').textContent = shot.tempo ? `${shot.tempo.toFixed(1)}:1` : '–';
+  clearTimeout(resultTimer); resultShownAt = performance.now();
   $('result').classList.remove('dim');
   const best = Math.max(0, ...shots.filter(x => x.club === shot.club).slice(0, -1).map(x => x.total));
   if (s.totalYd > best && shots.filter(x => x.club === shot.club).length > 2) toast('Session best');
@@ -1321,7 +1326,7 @@ function onMotion(e) {
       if (M.still > 0.7) {
         calibrate();
         SWG.trail = []; rebuildTrail();
-        M.state = 'ready'; beep(880); toast('Swing'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (err) {}
+        M.state = 'ready'; hideResultSoon(); beep(880); toast('Swing'); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (err) {}
         setStatus('live', 'Ready. Swing when you like');
       }
       break;
@@ -1338,7 +1343,7 @@ function onMotion(e) {
       const proj = (w[0] * M.back[0] + w[1] * M.back[1] + w[2] * M.back[2]) / bl;
       M.below = mag < 25 ? M.below + dt : 0;
       // A real takeaway turns the club well past a waggle (~70°). Until then it's just a waggle.
-      if (!M.committed && bl > 70) { M.committed = true; learnPlane(); setStatus('live', 'Backswing…'); }
+      if (!M.committed && bl > 70) { M.committed = true; hideResult(); learnPlane(); setStatus('live', 'Backswing…'); }
       if (proj < -60) {
         if (M.committed && now - M.backStart > 180) {
           M.state = 'down'; M.top = now; M.peak = 0; SWG.best = null; SWG.crossed = false; SWG.prevSample = null;
@@ -1467,6 +1472,7 @@ function useSwipe(keepStatus) {
 }
 canvas.addEventListener('pointerdown', (e) => {
   if (mode !== 'swipe' || busy) return;
+  hideResult();
   audio();
   sw.active = true; sw.pts = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
   canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
@@ -1563,6 +1569,7 @@ const openSheet = (id) => { $(id).hidden = false; };
 const closeSheet = (id) => { $(id).hidden = true; };
 $('openSettings').addEventListener('click', () => openSheet('settingsSheet'));
 $('closeSettings').addEventListener('click', () => closeSheet('settingsSheet'));
+$('result').addEventListener('click', hideResult);
 $('flipView').addEventListener('click', () => { settings.mirror = settings.mirror ? 0 : 1; saveSettings(); toast('View flipped'); });
 $('relearn').addEventListener('click', () => { resetGrip(); toast('Grip reset'); });
 $('openShots').addEventListener('click', () => { renderShots(); openSheet('shotsSheet'); });
